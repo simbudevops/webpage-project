@@ -9,7 +9,6 @@ pipeline {
         FULL_IMAGE         = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
-        SONAR_TOKEN        = credentials('sonar-token')
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
     }
     stages {
@@ -21,11 +20,9 @@ pipeline {
 
                     sudo apt-get update -y
 
-                    # Install Java 17
                     echo "Installing Java 17..."
                     sudo apt-get install -y openjdk-17-jdk
 
-                    # Register and set Java 17 as default
                     sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 2
                     sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 2
                     sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
@@ -35,7 +32,6 @@ pipeline {
                     export PATH=$JAVA_HOME/bin:$PATH
                     java -version
 
-                    # Install Maven
                     if ! mvn -version 2>/dev/null; then
                         echo "Installing Maven..."
                         sudo apt-get install -y maven
@@ -49,7 +45,6 @@ pipeline {
                     export PATH=$JAVA_HOME/bin:$PATH
                     mvn -version
 
-                    # Install Docker
                     if ! docker --version 2>/dev/null; then
                         echo "Installing Docker..."
                         sudo apt-get install -y docker.io
@@ -61,7 +56,6 @@ pipeline {
                     sudo chmod 666 /var/run/docker.sock
                     docker --version
 
-                    # Install kubectl
                     if ! kubectl version --client 2>/dev/null; then
                         echo "Installing kubectl..."
                         sudo snap install kubectl --classic
@@ -70,7 +64,6 @@ pipeline {
                     fi
                     kubectl version --client
 
-                    # Check SonarQube is running
                     echo "Checking SonarQube..."
                     if docker ps | grep -q sonarqube; then
                         echo "SonarQube already running"
@@ -100,7 +93,6 @@ pipeline {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
-                    echo "Using JAVA_HOME: $JAVA_HOME"
                     java -version
                     mvn clean compile
                 '''
@@ -112,7 +104,6 @@ pipeline {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
-                    echo "Using JAVA_HOME: $JAVA_HOME"
                     mvn test
                 '''
             }
@@ -123,7 +114,6 @@ pipeline {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
-                    echo "Using JAVA_HOME: $JAVA_HOME"
                     mvn package -DskipTests
                     ls -lh target/*.jar
                 '''
@@ -132,16 +122,17 @@ pipeline {
 
         stage('SonarQube Scan') {
             steps {
-                withSonarQubeEnv("${SONAR_SERVER}") {
-                    sh '''
-                        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-                        export PATH=$JAVA_HOME/bin:$PATH
-                        echo "Using JAVA_HOME: $JAVA_HOME"
-                        mvn sonar:sonar \
-                            -Dsonar.projectKey=simbu-app \
-                            -Dsonar.host.url=http://localhost:9000 \
-                            -Dsonar.login=${SONAR_TOKEN}
-                    '''
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                    withSonarQubeEnv("${SONAR_SERVER}") {
+                        sh '''
+                            export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+                            export PATH=$JAVA_HOME/bin:$PATH
+                            mvn sonar:sonar \
+                                -Dsonar.projectKey=simbu-app \
+                                -Dsonar.host.url=http://13.235.56.152:9000 \
+                                -Dsonar.login=${SONAR_TOKEN}
+                        '''
+                    }
                 }
             }
         }
@@ -181,24 +172,37 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-    steps {
-        sh '''
-            # Copy fresh kubeconfig from ubuntu user
-            mkdir -p /var/lib/jenkins/.kube
-            sudo cp /home/ubuntu/.kube/config /var/lib/jenkins/.kube/config
-            sudo chown jenkins:jenkins /var/lib/jenkins/.kube/config
-            sudo chmod 600 /var/lib/jenkins/.kube/config
+            steps {
+                sh '''
+                    mkdir -p /var/lib/jenkins/.kube
+                    sudo cp /home/ubuntu/.kube/config /var/lib/jenkins/.kube/config
+                    sudo chown jenkins:jenkins /var/lib/jenkins/.kube/config
+                    sudo chmod 600 /var/lib/jenkins/.kube/config
 
-            # Set KUBECONFIG and verify connection
-            export KUBECONFIG=/var/lib/jenkins/.kube/config
-            kubectl get nodes
+                    export KUBECONFIG=/var/lib/jenkins/.kube/config
+                    kubectl get nodes
 
-            # Deploy
-            kubectl apply -f k8s-deployment.yml --validate=false
-            kubectl apply -f k8s-service.yml --validate=false
-            kubectl rollout status deployment/simbu-app --timeout=120s
-            kubectl get pods
-            kubectl get svc
-        '''
+                    kubectl apply -f k8s-deployment.yml --validate=false
+                    kubectl apply -f k8s-service.yml --validate=false
+                    kubectl rollout status deployment/simbu-app --timeout=120s
+                    kubectl get pods
+                    kubectl get svc
+                '''
+            }
+        }
+
+    }
+    post {
+        success {
+            echo 'PIPELINE SUCCESS! App is live.'
+        }
+        failure {
+            echo 'PIPELINE FAILED! Check the logs above.'
+        }
+        always {
+            node('') {
+                cleanWs()
+            }
+        }
     }
 }
