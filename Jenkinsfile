@@ -1,9 +1,7 @@
 pipeline {
-
     agent any
-
     environment {
-        PATH               = "/usr/share/maven/bin:/usr/lib/jvm/java-17-openjdk-amd64/bin:${PATH}"
+        PATH               = "/usr/bin:/usr/local/bin:${PATH}"
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
         GIT_BRANCH         = "master"
         DOCKERHUB_USERNAME = "simbudevops"
@@ -13,33 +11,27 @@ pipeline {
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
     }
-
     stages {
-
         stage('Checkout Code') {
             steps {
                 git branch: "${GIT_BRANCH}", url: "${GIT_REPO}"
             }
         }
-
         stage('Maven Compile') {
             steps {
                 sh 'mvn clean compile'
             }
         }
-
         stage('Maven Test') {
             steps {
                 sh 'mvn test'
             }
         }
-
         stage('Maven Package') {
             steps {
                 sh 'mvn package -DskipTests'
             }
         }
-
         stage('SonarQube Scan') {
             steps {
                 withSonarQubeEnv("${SONAR_SERVER}") {
@@ -47,7 +39,6 @@ pipeline {
                 }
             }
         }
-
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -55,13 +46,11 @@ pipeline {
                 }
             }
         }
-
         stage('Docker Build') {
             steps {
                 sh "docker build -t ${FULL_IMAGE} ."
             }
         }
-
         stage('Docker Push') {
             steps {
                 withCredentials([usernamePassword(
@@ -77,7 +66,6 @@ pipeline {
                 }
             }
         }
-
         stage('Deploy to Kubernetes') {
             steps {
                 sh 'kubectl apply -f k8s-deployment.yml'
@@ -86,9 +74,7 @@ pipeline {
                 sh 'kubectl get svc'
             }
         }
-
     }
-
     post {
         success {
             echo '✅ PIPELINE SUCCESS! Access: http://<your-server-ip>:30080'
