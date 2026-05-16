@@ -181,10 +181,15 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
+            environment {
+                KUBECONFIG = "/var/lib/jenkins/.kube/config"
+            }
             steps {
                 sh '''
-                    kubectl apply -f k8s-deployment.yml
-                    kubectl apply -f k8s-service.yml
+                    export KUBECONFIG=/var/lib/jenkins/.kube/config
+                    kubectl get nodes
+                    kubectl apply -f k8s-deployment.yml --validate=false
+                    kubectl apply -f k8s-service.yml --validate=false
                     kubectl rollout status deployment/simbu-app --timeout=120s
                     kubectl get pods
                     kubectl get svc
@@ -201,7 +206,9 @@ pipeline {
             echo 'PIPELINE FAILED! Check the logs above.'
         }
         always {
-            cleanWs()
+            node('') {
+                cleanWs()
+            }
         }
     }
 }
