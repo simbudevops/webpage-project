@@ -20,19 +20,22 @@ pipeline {
 
                     sudo apt-get update -y
 
-                    if ! java -version 2>&1 | grep -q "11"; then
-                        echo "Installing Java 11..."
-                        sudo apt-get install -y openjdk-11-jdk
-                    else
-                        echo "Java 11 already installed"
-                    fi
+                    # Install Java 11 forcefully
+                    echo "Installing Java 11..."
+                    sudo apt-get install -y openjdk-11-jdk
 
-                    sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java || true
+                    # Remove Java 21 as default and set Java 11
+                    sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-11-openjdk-amd64/bin/java 1
+                    sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-11-openjdk-amd64/bin/javac 1
+                    sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java
+                    sudo update-alternatives --set javac /usr/lib/jvm/java-11-openjdk-amd64/bin/javac
+
                     export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
                     java -version
 
-                    if ! /usr/share/maven/bin/mvn -version 2>/dev/null; then
+                    # Install Maven
+                    if ! mvn -version 2>/dev/null; then
                         echo "Installing Maven..."
                         sudo apt-get install -y maven
                     else
@@ -40,8 +43,12 @@ pipeline {
                     fi
                     sudo ln -sf /usr/share/maven/bin/mvn /usr/local/bin/mvn
                     sudo ln -sf /usr/share/maven/bin/mvn /usr/bin/mvn
-                    /usr/share/maven/bin/mvn -version
 
+                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export PATH=$JAVA_HOME/bin:$PATH
+                    mvn -version
+
+                    # Install Docker
                     if ! docker --version 2>/dev/null; then
                         echo "Installing Docker..."
                         sudo apt-get install -y docker.io
@@ -53,6 +60,7 @@ pipeline {
                     sudo chmod 666 /var/run/docker.sock
                     docker --version
 
+                    # Install kubectl
                     if ! kubectl version --client 2>/dev/null; then
                         echo "Installing kubectl..."
                         sudo snap install kubectl --classic
@@ -78,7 +86,9 @@ pipeline {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
-                    /usr/share/maven/bin/mvn clean compile
+                    echo "Using JAVA_HOME: $JAVA_HOME"
+                    java -version
+                    mvn clean compile
                 '''
             }
         }
@@ -88,7 +98,8 @@ pipeline {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
-                    /usr/share/maven/bin/mvn test
+                    echo "Using JAVA_HOME: $JAVA_HOME"
+                    mvn test
                 '''
             }
         }
@@ -98,7 +109,8 @@ pipeline {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
-                    /usr/share/maven/bin/mvn package -DskipTests
+                    echo "Using JAVA_HOME: $JAVA_HOME"
+                    mvn package -DskipTests
                     ls -lh target/*.jar
                 '''
             }
@@ -110,7 +122,8 @@ pipeline {
                     sh '''
                         export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
                         export PATH=$JAVA_HOME/bin:$PATH
-                        /usr/share/maven/bin/mvn sonar:sonar -Dsonar.projectKey=simbu-app
+                        echo "Using JAVA_HOME: $JAVA_HOME"
+                        mvn sonar:sonar -Dsonar.projectKey=simbu-app
                     '''
                 }
             }
