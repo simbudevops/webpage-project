@@ -20,11 +20,6 @@ pipeline {
         SONAR_SERVER        = "SonarQube"
     }
 
-    tools {
-        maven "Maven3"
-        jdk   "JDK17"
-    }
-
     stages {
 
         // ── Stage 1: Pull Code from GitHub ────────────────────
