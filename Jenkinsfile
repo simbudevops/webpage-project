@@ -9,7 +9,7 @@ pipeline {
         FULL_IMAGE         = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
-        JAVA_HOME          = "/usr/lib/jvm/java-11-openjdk-amd64"
+        JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
     }
     stages {
 
@@ -20,17 +20,17 @@ pipeline {
 
                     sudo apt-get update -y
 
-                    # Install Java 11 forcefully
-                    echo "Installing Java 11..."
-                    sudo apt-get install -y openjdk-11-jdk
+                    # Install Java 17
+                    echo "Installing Java 17..."
+                    sudo apt-get install -y openjdk-17-jdk
 
-                    # Remove Java 21 as default and set Java 11
-                    sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-11-openjdk-amd64/bin/java 1
-                    sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-11-openjdk-amd64/bin/javac 1
-                    sudo update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java
-                    sudo update-alternatives --set javac /usr/lib/jvm/java-11-openjdk-amd64/bin/javac
+                    # Register and set Java 17 as default
+                    sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 2
+                    sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 2
+                    sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+                    sudo update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
 
-                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
                     java -version
 
@@ -44,7 +44,7 @@ pipeline {
                     sudo ln -sf /usr/share/maven/bin/mvn /usr/local/bin/mvn
                     sudo ln -sf /usr/share/maven/bin/mvn /usr/bin/mvn
 
-                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
                     mvn -version
 
@@ -84,7 +84,7 @@ pipeline {
         stage('Maven Compile') {
             steps {
                 sh '''
-                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
                     echo "Using JAVA_HOME: $JAVA_HOME"
                     java -version
@@ -96,7 +96,7 @@ pipeline {
         stage('Maven Test') {
             steps {
                 sh '''
-                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
                     echo "Using JAVA_HOME: $JAVA_HOME"
                     mvn test
@@ -107,7 +107,7 @@ pipeline {
         stage('Maven Package') {
             steps {
                 sh '''
-                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
                     echo "Using JAVA_HOME: $JAVA_HOME"
                     mvn package -DskipTests
@@ -120,10 +120,12 @@ pipeline {
             steps {
                 withSonarQubeEnv("${SONAR_SERVER}") {
                     sh '''
-                        export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                         export PATH=$JAVA_HOME/bin:$PATH
                         echo "Using JAVA_HOME: $JAVA_HOME"
-                        mvn sonar:sonar -Dsonar.projectKey=simbu-app
+                        mvn sonar:sonar \
+                            -Dsonar.projectKey=simbu-app \
+                            -Dsonar.host.url=http://localhost:9000
                     '''
                 }
             }
