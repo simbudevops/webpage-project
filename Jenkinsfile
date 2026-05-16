@@ -9,6 +9,7 @@ pipeline {
         FULL_IMAGE         = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
+        SONAR_TOKEN        = credentials('sonar-token')
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
     }
     stages {
@@ -69,6 +70,19 @@ pipeline {
                     fi
                     kubectl version --client
 
+                    # Check SonarQube is running
+                    echo "Checking SonarQube..."
+                    if docker ps | grep -q sonarqube; then
+                        echo "SonarQube already running"
+                    else
+                        echo "Starting SonarQube..."
+                        docker run -d --name sonarqube \
+                            -p 9000:9000 \
+                            sonarqube:lts-community
+                        echo "Waiting for SonarQube to be ready..."
+                        sleep 60
+                    fi
+
                     echo "=== All Tools Ready ==="
                 '''
             }
@@ -125,7 +139,8 @@ pipeline {
                         echo "Using JAVA_HOME: $JAVA_HOME"
                         mvn sonar:sonar \
                             -Dsonar.projectKey=simbu-app \
-                            -Dsonar.host.url=http://localhost:9000
+                            -Dsonar.host.url=http://localhost:9000 \
+                            -Dsonar.login=${SONAR_TOKEN}
                     '''
                 }
             }
