@@ -9,60 +9,63 @@ pipeline {
         FULL_IMAGE         = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
+        JAVA_HOME          = "/usr/lib/jvm/java-11-openjdk-amd64"
     }
     stages {
 
         stage('Install Required Tools') {
             steps {
                 sh '''
-                    echo "=== Checking and Installing Required Tools ==="
+                    echo "=== Installing Required Tools ==="
 
-                    # Install Java if not found
-                    if ! java -version 2>/dev/null; then
-                        echo "Installing Java..."
-                        sudo apt update -y
-                        sudo apt install openjdk-17-jdk -y
+                    # Update apt
+                    apt-get update -y
+
+                    # Install Java 11
+                    if ! java -version 2>&1 | grep -q "11"; then
+                        echo "Installing Java 11..."
+                        apt-get install -y openjdk-11-jdk
                     else
-                        echo "✅ Java already installed"
-                        java -version
+                        echo "✅ Java 11 already installed"
                     fi
 
-                    # Install Maven if not found
+                    # Set Java 11 as default
+                    update-alternatives --set java /usr/lib/jvm/java-11-openjdk-amd64/bin/java || true
+                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export PATH=$JAVA_HOME/bin:$PATH
+                    java -version
+
+                    # Install Maven
                     if ! /usr/share/maven/bin/mvn -version 2>/dev/null; then
                         echo "Installing Maven..."
-                        sudo apt install maven -y
+                        apt-get install -y maven
                     else
                         echo "✅ Maven already installed"
                     fi
+                    ln -sf /usr/share/maven/bin/mvn /usr/local/bin/mvn
+                    ln -sf /usr/share/maven/bin/mvn /usr/bin/mvn
                     /usr/share/maven/bin/mvn -version
 
-                    # Create mvn symlink
-                    sudo ln -sf /usr/share/maven/bin/mvn /usr/local/bin/mvn
-                    sudo ln -sf /usr/share/maven/bin/mvn /usr/bin/mvn
-
-                    # Install Docker if not found
+                    # Install Docker
                     if ! docker --version 2>/dev/null; then
                         echo "Installing Docker..."
-                        sudo apt install docker.io -y
-                        sudo systemctl start docker
-                        sudo systemctl enable docker
+                        apt-get install -y docker.io
+                        systemctl start docker
+                        systemctl enable docker
                     else
                         echo "✅ Docker already installed"
-                        docker --version
                     fi
+                    chmod 666 /var/run/docker.sock
+                    docker --version
 
-                    # Fix Docker permission for jenkins user
-                    sudo usermod -aG docker jenkins
-                    sudo chmod 666 /var/run/docker.sock
-
-                    # Install kubectl if not found
+                    # Install kubectl
                     if ! kubectl version --client 2>/dev/null; then
                         echo "Installing kubectl..."
-                        sudo snap install kubectl --classic
+                        snap install kubectl --classic
                     else
                         echo "✅ kubectl already installed"
-                        kubectl version --client
                     fi
+                    kubectl version --client
 
                     echo "=== All Tools Ready ==="
                 '''
@@ -78,27 +81,43 @@ pipeline {
 
         stage('Maven Compile') {
             steps {
-                sh '/usr/share/maven/bin/mvn clean compile'
+                sh '''
+                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export PATH=$JAVA_HOME/bin:$PATH
+                    /usr/share/maven/bin/mvn clean compile
+                '''
             }
         }
 
         stage('Maven Test') {
             steps {
-                sh '/usr/share/maven/bin/mvn test'
+                sh '''
+                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export PATH=$JAVA_HOME/bin:$PATH
+                    /usr/share/maven/bin/mvn test
+                '''
             }
         }
 
         stage('Maven Package') {
             steps {
-                sh '/usr/share/maven/bin/mvn package -DskipTests'
-                sh 'ls -lh target/*.jar'
+                sh '''
+                    export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                    export PATH=$JAVA_HOME/bin:$PATH
+                    /usr/share/maven/bin/mvn package -DskipTests
+                    ls -lh target/*.jar
+                '''
             }
         }
 
         stage('SonarQube Scan') {
             steps {
                 withSonarQubeEnv("${SONAR_SERVER}") {
-                    sh '/usr/share/maven/bin/mvn sonar:sonar -Dsonar.projectKey=simbu-app'
+                    sh '''
+                        export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+                        export PATH=$JAVA_HOME/bin:$PATH
+                        /usr/share/maven/bin/mvn sonar:sonar -Dsonar.projectKey=simbu-app
+                    '''
                 }
             }
         }
@@ -113,7 +132,10 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh "docker build -t ${FULL_IMAGE} ."
+                sh '''
+                    chmod 666 /var/run/docker.sock
+                    docker build -t ${FULL_IMAGE} .
+                '''
             }
         }
 
@@ -125,6 +147,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh """
+                        chmod 666 /var/run/docker.sock
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${FULL_IMAGE}
                         docker logout
@@ -135,11 +158,13 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f k8s-deployment.yml'
-                sh 'kubectl apply -f k8s-service.yml'
-                sh 'kubectl rollout status deployment/simbu-app --timeout=120s'
-                sh 'kubectl get pods'
-                sh 'kubectl get svc'
+                sh '''
+                    kubectl apply -f k8s-deployment.yml
+                    kubectl apply -f k8s-service.yml
+                    kubectl rollout status deployment/simbu-app --timeout=120s
+                    kubectl get pods
+                    kubectl get svc
+                '''
             }
         }
 
