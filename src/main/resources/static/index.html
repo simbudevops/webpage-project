@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SIMBU - DevOps Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --card: #0f1629;
+      --border: #1e3a5f;
+      --accent: #00d4ff;
+      --accent2: #ff6b35;
+      --text: #c8d8e8;
+      --white: #ffffff;
+      --green: #00ff88;
+      --purple: #7b2fff;
+      --yellow: #ffd700;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HERO ── */
+    header {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 60px 20px 40px;
+    }
+    .logo-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(3rem, 10vw, 7rem);
+      font-weight: 900;
+      letter-spacing: 0.3em;
+      background: linear-gradient(135deg, var(--accent), var(--purple), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: none;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { filter: drop-shadow(0 0 20px rgba(0,212,255,0.4)); }
+      50%      { filter: drop-shadow(0 0 40px rgba(123,47,255,0.6)); }
+    }
+    .tagline {
+      margin-top: 12px;
+      font-size: 1rem;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      opacity: 0.8;
+    }
+
+    /* ── NAV BUTTONS ── */
+    nav {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      padding: 20px;
+      margin-bottom: 10px;
+    }
+    .nav-btn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      padding: 12px 24px;
+      border: 2px solid;
+      border-radius: 4px;
+      cursor: pointer;
+      background: transparent;
+      transition: all 0.25s;
+      text-transform: uppercase;
+      position: relative;
+      overflow: hidden;
+    }
+    .nav-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .nav-btn:hover::after { opacity: 0.12; }
+    .nav-btn:hover { transform: translateY(-3px); }
+
+    .btn-git      { border-color: #f05033; color: #f05033; }
+    .btn-git::after      { background: #f05033; }
+    .btn-git:hover       { box-shadow: 0 0 20px #f0503355; }
+
+    .btn-docker   { border-color: #2496ed; color: #2496ed; }
+    .btn-docker::after   { background: #2496ed; }
+    .btn-docker:hover    { box-shadow: 0 0 20px #2496ed55; }
+
+    .btn-jenkins  { border-color: #d33833; color: #d33833; }
+    .btn-jenkins::after  { background: #d33833; }
+    .btn-jenkins:hover   { box-shadow: 0 0 20px #d3383355; }
+
+    .btn-ansible  { border-color: var(--accent2); color: var(--accent2); }
+    .btn-ansible::after  { background: var(--accent2); }
+    .btn-ansible:hover   { box-shadow: 0 0 20px #ff6b3555; }
+
+    .btn-k8s      { border-color: #326ce5; color: #326ce5; }
+    .btn-k8s::after      { background: #326ce5; }
+    .btn-k8s:hover       { box-shadow: 0 0 20px #326ce555; }
+
+    .btn-terraform{ border-color: #7b42bc; color: #7b42bc; }
+    .btn-terraform::after{ background: #7b42bc; }
+    .btn-terraform:hover { box-shadow: 0 0 20px #7b42bc55; }
+
+    .btn-cloud    { border-color: var(--green); color: var(--green); }
+    .btn-cloud::after    { background: var(--green); }
+    .btn-cloud:hover     { box-shadow: 0 0 20px #00ff8855; }
+
+    /* ── SECTIONS ── */
+    main { position: relative; z-index: 1; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .section {
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    .section.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── TABLE ── */
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 28px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .icon { font-size: 2rem; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    thead tr {
+      background: rgba(0,212,255,0.07);
+    }
+    th {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+      color: var(--accent);
+    }
+    td {
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--border);
+      line-height: 1.55;
+      vertical-align: top;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    code {
+      background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 3px;
+      padding: 1px 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85em;
+      color: var(--green);
+    }
+
+    /* colour per tool */
+    #git      .section-title { color: #f05033; border-color: #f05033; }
+    #docker   .section-title { color: #2496ed; border-color: #2496ed; }
+    #jenkins  .section-title { color: #d33833; border-color: #d33833; }
+    #ansible  .section-title { color: var(--accent2); border-color: var(--accent2); }
+    #k8s      .section-title { color: #326ce5; border-color: #326ce5; }
+    #terraform.section-title { color: #7b42bc; border-color: #7b42bc; }
+    #cloud    .section-title { color: var(--green); border-color: var(--green); }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .badge-cmd  { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid var(--green); }
+    .badge-conf { background: rgba(255,215,0,0.15);  color: var(--yellow); border: 1px solid var(--yellow); }
+    .badge-info { background: rgba(0,212,255,0.15);  color: var(--accent); border: 1px solid var(--accent); }
+
+    footer {
+      position: relative; z-index: 1;
+      text-align: center;
+      padding: 40px;
+      color: rgba(200,216,232,0.3);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-title">SIMBU</div>
+  <div class="tagline">// DevOps Command Center //</div>
+</header>
+
+<nav>
+  <button class="nav-btn btn-git"       onclick="show('git')">⬡ Git</button>
+  <button class="nav-btn btn-docker"    onclick="show('docker')">🐳 Docker</button>
+  <button class="nav-btn btn-jenkins"   onclick="show('jenkins')">⚙ Jenkins</button>
+  <button class="nav-btn btn-ansible"   onclick="show('ansible')">📦 Ansible</button>
+  <button class="nav-btn btn-k8s"       onclick="show('k8s')">☸ Kubernetes</button>
+  <button class="nav-btn btn-terraform" onclick="show('terraform')">🔷 Terraform</button>
+  <button class="nav-btn btn-cloud"     onclick="show('cloud')">☁ Cloud</button>
+</nav>
+
+<main>
+
+  <!-- GIT -->
+  <div class="section" id="git">
+    <div class="section-title"><span class="icon">⬡</span> Git — Version Control</div>
+    <table>
+      <thead><tr><th>#</th><th>Action</th><th>Command</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Install Git (Ubuntu)</td><td><code>sudo apt update &amp;&amp; sudo apt install git -y</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>2</td><td>Check version</td><td><code>git --version</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>3</td><td>Set username</td><td><code>git config --global user.name "YourName"</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>4</td><td>Set email</td><td><code>git config --global user.email "you@email.com"</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>5</td><td>Initialise repo</td><td><code>git init</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>6</td><td>Clone a repo</td><td><code>git clone &lt;repo-url&gt;</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>7</td><td>Add all files</td><td><code>git add .</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>8</td><td>Commit changes</td><td><code>git commit -m "your message"</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>9</td><td>Push to remote</td><td><code>git push origin main</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>10</td><td>Pull from remote</td><td><code>git pull origin main</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>11</td><td>Check status</td><td><code>git status</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>12</td><td>View log</td><td><code>git log --oneline</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>13</td><td>Create branch</td><td><code>git checkout -b feature-branch</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>14</td><td>Merge branch</td><td><code>git merge feature-branch</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>15</td><td>Add remote origin</td><td><code>git remote add origin &lt;url&gt;</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- DOCKER -->
+  <div class="section" id="docker">
+    <div class="section-title"><span class="icon">🐳</span> Docker — Containerisation</div>
+    <table>
+      <thead><tr><th>#</th><th>Action</th><th>Command</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Install Docker (Ubuntu)</td><td><code>sudo apt update &amp;&amp; sudo apt install docker.io -y</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>2</td><td>Start &amp; enable Docker</td><td><code>sudo systemctl start docker &amp;&amp; sudo systemctl enable docker</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>3</td><td>Add user to docker group</td><td><code>sudo usermod -aG docker $USER</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>4</td><td>Check version</td><td><code>docker --version</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>5</td><td>Build image</td><td><code>docker build -t simbu-app:1.0 .</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>6</td><td>List images</td><td><code>docker images</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>7</td><td>Run container</td><td><code>docker run -d -p 8080:8080 --name simbu simbu-app:1.0</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>8</td><td>List running containers</td><td><code>docker ps</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>9</td><td>Stop container</td><td><code>docker stop simbu</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>10</td><td>Remove container</td><td><code>docker rm simbu</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>11</td><td>Login to DockerHub</td><td><code>docker login</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>12</td><td>Tag image</td><td><code>docker tag simbu-app:1.0 yourdockerhubid/simbu-app:1.0</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>13</td><td>Push to DockerHub</td><td><code>docker push yourdockerhubid/simbu-app:1.0</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>14</td><td>Pull image</td><td><code>docker pull yourdockerhubid/simbu-app:1.0</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>15</td><td>View logs</td><td><code>docker logs simbu</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- JENKINS -->
+  <div class="section" id="jenkins">
+    <div class="section-title"><span class="icon">⚙</span> Jenkins — CI/CD</div>
+    <table>
+      <thead><tr><th>#</th><th>Action</th><th>Command / Step</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Install Java (required)</td><td><code>sudo apt install openjdk-17-jdk -y</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>2</td><td>Add Jenkins repo key</td><td><code>curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee /usr/share/keyrings/jenkins-keyring.asc &gt; /dev/null</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>3</td><td>Add Jenkins apt source</td><td><code>echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>4</td><td>Install Jenkins</td><td><code>sudo apt update &amp;&amp; sudo apt install jenkins -y</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>5</td><td>Start Jenkins</td><td><code>sudo systemctl start jenkins &amp;&amp; sudo systemctl enable jenkins</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>6</td><td>Get admin password</td><td><code>sudo cat /var/lib/jenkins/secrets/initialAdminPassword</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>7</td><td>Access Jenkins UI</td><td><code>http://&lt;server-ip&gt;:8080</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>8</td><td>Install plugins</td><td>Dashboard → Manage Jenkins → Plugins → Maven, Docker, SonarQube</td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>9</td><td>Create Pipeline job</td><td>New Item → Pipeline → Add Jenkinsfile script</td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>10</td><td>Jenkinsfile stages</td><td>Checkout → Maven Build → SonarQube Scan → Docker Build → Push → K8s Deploy</td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>11</td><td>Configure Maven in Jenkins</td><td>Manage Jenkins → Tools → Maven → Add Maven</td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>12</td><td>Configure SonarQube</td><td>Manage Jenkins → Configure System → SonarQube Servers</td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>13</td><td>Add DockerHub credentials</td><td>Manage Jenkins → Credentials → Add → Username/Password</td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>14</td><td>Trigger build</td><td>Open job → Build Now</td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>15</td><td>View build console</td><td>Build # → Console Output</td><td><span class="badge badge-info">INFO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ANSIBLE -->
+  <div class="section" id="ansible">
+    <div class="section-title"><span class="icon">📦</span> Ansible — Configuration Management</div>
+    <table>
+      <thead><tr><th>#</th><th>Action</th><th>Command / File</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Install Ansible</td><td><code>sudo apt update &amp;&amp; sudo apt install ansible -y</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>2</td><td>Check version</td><td><code>ansible --version</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>3</td><td>Create inventory file</td><td><code>mkdir ~/ansible &amp;&amp; nano ~/ansible/hosts</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>4</td><td>Inventory file content</td><td><code>[webservers]<br>192.168.1.10 ansible_user=ubuntu</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>5</td><td>Ping all hosts</td><td><code>ansible all -i ~/ansible/hosts -m ping</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>6</td><td>Create playbook file</td><td><code>nano ~/ansible/deploy.yml</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>7</td><td>Run a playbook</td><td><code>ansible-playbook -i hosts deploy.yml</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>8</td><td>Check syntax</td><td><code>ansible-playbook deploy.yml --syntax-check</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>9</td><td>Dry run (check mode)</td><td><code>ansible-playbook deploy.yml --check</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>10</td><td>List hosts in group</td><td><code>ansible webservers --list-hosts</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>11</td><td>Ad-hoc command</td><td><code>ansible all -m shell -a "uptime"</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>12</td><td>Copy file to remote</td><td><code>ansible all -m copy -a "src=app.jar dest=/opt/app/"</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>13</td><td>Use vault for secrets</td><td><code>ansible-vault create secrets.yml</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>14</td><td>Install role from Galaxy</td><td><code>ansible-galaxy install geerlingguy.docker</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>15</td><td>Verbose output</td><td><code>ansible-playbook deploy.yml -v</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- K8S -->
+  <div class="section" id="k8s">
+    <div class="section-title"><span class="icon">☸</span> Kubernetes — Container Orchestration</div>
+    <table>
+      <thead><tr><th>#</th><th>Action</th><th>Command</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Install kubectl</td><td><code>sudo snap install kubectl --classic</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>2</td><td>Install Minikube (local)</td><td><code>curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 &amp;&amp; sudo install minikube-linux-amd64 /usr/local/bin/minikube</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>3</td><td>Start Minikube</td><td><code>minikube start</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>4</td><td>Check cluster info</td><td><code>kubectl cluster-info</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>5</td><td>Create deployment YAML</td><td><code>nano deployment.yml</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>6</td><td>Apply deployment</td><td><code>kubectl apply -f deployment.yml</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>7</td><td>Apply service</td><td><code>kubectl apply -f service.yml</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>8</td><td>Get all pods</td><td><code>kubectl get pods</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>9</td><td>Get services</td><td><code>kubectl get svc</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>10</td><td>Describe pod</td><td><code>kubectl describe pod &lt;pod-name&gt;</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>11</td><td>View pod logs</td><td><code>kubectl logs &lt;pod-name&gt;</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>12</td><td>Get NodePort URL (Minikube)</td><td><code>minikube service simbu-service --url</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>13</td><td>Scale deployment</td><td><code>kubectl scale deployment simbu-app --replicas=3</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>14</td><td>Delete deployment</td><td><code>kubectl delete -f deployment.yml</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>15</td><td>Get all resources</td><td><code>kubectl get all</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TERRAFORM -->
+  <div class="section" id="terraform">
+    <div class="section-title"><span class="icon">🔷</span> Terraform — Infrastructure as Code</div>
+    <table>
+      <thead><tr><th>#</th><th>Action</th><th>Command / File</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Install Terraform</td><td><code>sudo snap install terraform --classic</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>2</td><td>Check version</td><td><code>terraform version</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>3</td><td>Create project folder</td><td><code>mkdir ~/terraform-simbu &amp;&amp; cd ~/terraform-simbu</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>4</td><td>Create main.tf</td><td><code>nano main.tf</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>5</td><td>Initialise Terraform</td><td><code>terraform init</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>6</td><td>Validate config</td><td><code>terraform validate</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>7</td><td>Plan changes</td><td><code>terraform plan</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>8</td><td>Apply (create infra)</td><td><code>terraform apply -auto-approve</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>9</td><td>Show state</td><td><code>terraform show</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>10</td><td>List resources</td><td><code>terraform state list</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>11</td><td>Output values</td><td><code>terraform output</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>12</td><td>Destroy infra</td><td><code>terraform destroy -auto-approve</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>13</td><td>Format code</td><td><code>terraform fmt</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>14</td><td>Use variables file</td><td><code>nano variables.tf &amp;&amp; nano terraform.tfvars</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>15</td><td>Remote backend (S3)</td><td>Add <code>backend "s3"</code> block in main.tf then re-run <code>terraform init</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CLOUD -->
+  <div class="section" id="cloud">
+    <div class="section-title"><span class="icon">☁</span> Cloud (AWS) — Essential Commands</div>
+    <table>
+      <thead><tr><th>#</th><th>Action</th><th>Command</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Install AWS CLI</td><td><code>sudo apt install awscli -y</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>2</td><td>Configure credentials</td><td><code>aws configure</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>3</td><td>List S3 buckets</td><td><code>aws s3 ls</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>4</td><td>Create S3 bucket</td><td><code>aws s3 mb s3://simbu-bucket</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>5</td><td>Upload file to S3</td><td><code>aws s3 cp app.jar s3://simbu-bucket/</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>6</td><td>List EC2 instances</td><td><code>aws ec2 describe-instances</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>7</td><td>Start EC2 instance</td><td><code>aws ec2 start-instances --instance-ids i-xxxxxxxx</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>8</td><td>Stop EC2 instance</td><td><code>aws ec2 stop-instances --instance-ids i-xxxxxxxx</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>9</td><td>Create EKS cluster</td><td><code>eksctl create cluster --name simbu-cluster --region ap-south-1</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>10</td><td>Update kubeconfig for EKS</td><td><code>aws eks update-kubeconfig --name simbu-cluster --region ap-south-1</code></td><td><span class="badge badge-conf">CONFIG</span></td></tr>
+        <tr><td>11</td><td>ECR login</td><td><code>aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin &lt;account-id&gt;.dkr.ecr.ap-south-1.amazonaws.com</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>12</td><td>Create ECR repository</td><td><code>aws ecr create-repository --repository-name simbu-app</code></td><td><span class="badge badge-cmd">CMD</span></td></tr>
+        <tr><td>13</td><td>Check IAM user</td><td><code>aws sts get-caller-identity</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>14</td><td>List regions</td><td><code>aws ec2 describe-regions --output table</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+        <tr><td>15</td><td>CloudWatch logs tail</td><td><code>aws logs tail /ecs/simbu --follow</code></td><td><span class="badge badge-info">INFO</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<footer>SIMBU DevOps Hub &nbsp;|&nbsp; Built for Beginners &nbsp;|&nbsp; Step-by-Step</footer>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+  // Show git by default
+  show('git');
+</script>
+</body>
+</html>

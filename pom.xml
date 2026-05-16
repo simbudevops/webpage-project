@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Parent: Spring Boot -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.2.0</version>
+    <relativePath/>
+  </parent>
+
+  <!-- Project Info -->
+  <groupId>com.simbu</groupId>
+  <artifactId>simbu-app</artifactId>
+  <version>1.0</version>
+  <packaging>jar</packaging>
+  <name>simbu-app</name>
+  <description>Simbu DevOps Web App</description>
+
+  <properties>
+    <java.version>17</java.version>
+    <!-- SonarQube properties -->
+    <sonar.projectKey>simbu-app</sonar.projectKey>
+    <sonar.host.url>http://localhost:9000</sonar.host.url>
+  </properties>
+
+  <dependencies>
+    <!-- Spring Boot Web (gives us REST + embedded Tomcat) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Spring Boot Test -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>simbu-app-1.0</finalName>
+    <plugins>
+      <!-- Spring Boot Maven Plugin (creates executable jar) -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- SonarQube Maven Plugin -->
+      <plugin>
+        <groupId>org.sonarsource.scanner.maven</groupId>
+        <artifactId>sonar-maven-plugin</artifactId>
+        <version>3.10.0.2594</version>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

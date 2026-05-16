@@ -1,0 +1,59 @@
+# ═══════════════════════════════════════════════════════════
+# k8s-deployment.yml
+# Tells Kubernetes: run 2 copies of our simbu-app container
+# ═══════════════════════════════════════════════════════════
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simbu-app               # Name of this deployment
+  labels:
+    app: simbu-app
+
+spec:
+  replicas: 2                   # Run 2 copies (pods) for high availability
+
+  selector:
+    matchLabels:
+      app: simbu-app            # Manage pods with this label
+
+  template:
+    metadata:
+      labels:
+        app: simbu-app          # Label on each pod
+
+    spec:
+      containers:
+        - name: simbu-app
+          # ⚠️ CHANGE: Replace YOURDOCKERHUBUSERNAME below
+          image: YOURDOCKERHUBUSERNAME/simbu-app:1.0
+
+          # Always pull the latest image from DockerHub
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8080   # Port our app listens on
+
+          # Health checks — Kubernetes restarts pod if these fail
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
+
+          # Resource limits (keeps app from eating all server memory)
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

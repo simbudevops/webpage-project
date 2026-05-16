@@ -1,0 +1,19 @@
+package com.simbu;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+// @Controller serves HTML pages (not REST JSON)
+@Controller
+public class SimbuController {
+
+    // When someone opens http://<ip>:8080/
+    // Spring serves the file: src/main/resources/static/index.html
+    // automatically — no extra code needed!
+
+    // This endpoint is just a health check
+    @GetMapping("/health")
+    public org.springframework.http.ResponseEntity<String> health() {
+        return org.springframework.http.ResponseEntity.ok("Simbu App is Running OK!");
+    }
+}
