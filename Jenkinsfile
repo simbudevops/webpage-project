@@ -5,7 +5,7 @@ pipeline {
     environment {
         // Your GitHub repo
         GIT_REPO            = "https://github.com/simbudevops/webpage-project.git"
-        GIT_BRANCH          = "main"
+        GIT_BRANCH          = "master"
 
         // Your DockerHub username — CHANGE THIS
         DOCKERHUB_USERNAME  = "simbudevops"
