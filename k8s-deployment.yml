@@ -26,7 +26,7 @@ spec:
       containers:
         - name: simbu-app
           # ⚠️ CHANGE: Replace YOURDOCKERHUBUSERNAME below
-          image: YOURDOCKERHUBUSERNAME/simbu-app:1.0
+          image: simbudevops7497/simbu-app:1.0
 
           # Always pull the latest image from DockerHub
           imagePullPolicy: Always
