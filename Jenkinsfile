@@ -7,7 +7,6 @@ pipeline {
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
-        GITHUB_TOKEN       = credentials('github-token')
     }
     stages {
 
@@ -74,54 +73,21 @@ pipeline {
             steps {
                 script {
                     def branch = env.CURRENT_BRANCH
-                    def versionFile = "branch-versions.txt"
-                    def versions = [:]
 
-                    if (fileExists(versionFile)) {
-                        readFile(versionFile).trim().split('\n').each { line ->
-                            def parts = line.split('=')
-                            if (parts.size() == 2) {
-                                versions[parts[0].trim()] = parts[1].trim()
-                            }
-                        }
-                    }
-
+                    // master always gets latest
+                    // dev gets v1, any new branch gets its name as tag
                     if (branch == 'master') {
                         env.IMAGE_TAG = 'latest'
-                        echo "=== Branch 'master' → tag: latest ==="
-                    } else if (versions.containsKey(branch)) {
-                        env.IMAGE_TAG = versions[branch]
-                        echo "=== Existing branch '${branch}' → tag: ${env.IMAGE_TAG} ==="
+                    } else if (branch == 'dev') {
+                        env.IMAGE_TAG = 'v1'
                     } else {
-                        def maxVersion = 0
-                        versions.each { b, tag ->
-                            if (tag.startsWith('v')) {
-                                try {
-                                    def num = tag.replace('v', '').toInteger()
-                                    if (num > maxVersion) maxVersion = num
-                                } catch (e) {}
-                            }
-                        }
-                        def nextVersion = "v${maxVersion + 1}"
-                        env.IMAGE_TAG = nextVersion
-                        versions[branch] = nextVersion
-                        echo "=== New branch '${branch}' → assigned tag: ${env.IMAGE_TAG} ==="
-
-                        def content = versions.collect { b, t -> "${b}=${t}" }.join('\n')
-                        writeFile file: versionFile, text: content
-
-                        sh """
-                            git config user.email "jenkins@simbu.com"
-                            git config user.name "Jenkins"
-                            git remote set-url origin https://simbudevops:${GITHUB_TOKEN}@github.com/simbudevops/webpage-project.git
-                            git add ${versionFile}
-                            git commit -m "Auto: assign ${nextVersion} to branch ${branch}"
-                            git push origin ${branch}
-                        """
+                        // any future branch like v2, v3, feature-x → use branch name as tag
+                        env.IMAGE_TAG = branch
                     }
 
                     env.FULL_IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${env.IMAGE_TAG}"
-                    echo "=== Final Image: ${env.FULL_IMAGE} ==="
+                    echo "=== Branch: ${branch} → Image Tag: ${env.IMAGE_TAG} ==="
+                    echo "=== Full Image: ${env.FULL_IMAGE} ==="
                 }
             }
         }
