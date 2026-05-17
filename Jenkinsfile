@@ -198,7 +198,7 @@ pipeline {
             echo 'PIPELINE SUCCESS! App is live.'
         }
         failure {
-            echo 'PIPELINE FAILED! Check the logs above.'
+            echo 'PIPELINE FAILED! Check the logs above.'"
         }
         always {
             node('') {
