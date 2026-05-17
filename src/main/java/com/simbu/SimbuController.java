@@ -3,22 +3,27 @@ package com.simbu;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
-// @Controller serves HTML pages (not REST JSON)
 @Controller
 public class SimbuController {
 
-    /**
-     * Redirect root "/" → raegan.html (Page 1: Raegan AWS IAM Login)
-     * Flow: raegan.html → dashboard.html → index.html (Simbu Hub)
-     */
+    // Root URL → redirect to Raegan login (Page 1)
     @GetMapping("/")
-    public String root() {
+    public String home() {
         return "redirect:/raegan.html";
     }
 
-    // Health check endpoint
-    @GetMapping("/health")
-    public org.springframework.http.ResponseEntity<String> health() {
-        return org.springframework.http.ResponseEntity.ok("Simbu App is Running OK!");
+    @GetMapping("/raegan.html")
+    public String raegan() {
+        return "forward:/raegan.html";
+    }
+
+    @GetMapping("/dashboard.html")
+    public String dashboard() {
+        return "forward:/dashboard.html";
+    }
+
+    @GetMapping("/index.html")
+    public String simbuHub() {
+        return "forward:/index.html";
     }
 }
