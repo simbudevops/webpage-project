@@ -224,10 +224,44 @@
       font-size: 0.75rem;
       letter-spacing: 0.1em;
     }
+  /* back nav bar */
+  .back-bar{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:10px 28px;background:rgba(10,14,26,.97);border-bottom:1px solid rgba(0,212,255,.12);flex-wrap:wrap;gap:10px}
+  .crumb{font-size:.72rem;color:rgba(200,216,232,.4);letter-spacing:.1em;display:flex;align-items:center;gap:8px}
+  .crumb a{color:rgba(255,45,120,.8);text-decoration:none}
+  .crumb a:hover{color:#ff2d78}
+  .crumb .sep{opacity:.3}
+  .right-chips{display:flex;align-items:center;gap:10px}
+  .session-user{display:flex;align-items:center;gap:5px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.2);border-radius:20px;padding:4px 12px;font-size:.72rem;color:rgba(255,45,120,.8)}
+  .btn-back{font-family:Orbitron,sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;padding:7px 14px;border:1px solid rgba(0,212,255,.3);border-radius:4px;background:transparent;color:var(--accent);cursor:pointer;text-decoration:none;transition:all .2s}
+  .btn-back:hover{border-color:var(--accent);box-shadow:0 0 12px rgba(0,212,255,.3)}
+  .btn-slogout{font-family:Orbitron,sans-serif;font-size:.65rem;padding:7px 12px;border:1px solid rgba(255,45,120,.25);border-radius:4px;background:transparent;color:rgba(255,45,120,.6);cursor:pointer;transition:all .2s}
+  .btn-slogout:hover{border-color:#ff2d78;color:#ff2d78}
   </style>
 </head>
 <body>
-
+<script>
+  if (sessionStorage.getItem("iam_auth") !== "true") {
+    window.location.href = "/raegan.html";
+  }
+</script>
+<div class="back-bar">
+  <div class="crumb">
+    <a href="/raegan.html">RAEGAN</a>
+    <span class="sep">/</span>
+    <a href="/dashboard.html">AWS IAM Dashboard</a>
+    <span class="sep">/</span>
+    <span style="color:var(--accent)">SIMBU Hub</span>
+  </div>
+  <div class="right-chips">
+    <div class="session-user">&#128100; <span id="simbuUser">user</span></div>
+    <a href="/dashboard.html" class="btn-back">&larr; Dashboard</a>
+    <button class="btn-slogout" onclick="simbuLogout()">Logout</button>
+  </div>
+</div>
+<script>
+  document.getElementById("simbuUser").textContent = sessionStorage.getItem("iam_username") || "user";
+  function simbuLogout(){ sessionStorage.clear(); window.location.href="/raegan.html"; }
+</script>
 <header>
   <div class="logo-title">SIMBU</div>
   <div class="tagline">// DevOps Command Center //</div>

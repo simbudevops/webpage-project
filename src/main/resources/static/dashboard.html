@@ -1,20 +1,156 @@
-package com.simbu;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RAEGAN - AWS IAM Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#0a0e1a;font-family:'Share Tech Mono',monospace;color:#c8d8e8;min-height:100vh}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,45,120,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,45,120,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
 
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+    .topbar{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:14px 32px;background:rgba(15,22,41,.97);border-bottom:1px solid rgba(255,45,120,.2);flex-wrap:wrap;gap:12px}
+    .logo-small{font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:900;letter-spacing:.2em;background:linear-gradient(135deg,#ff2d78,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .aws-badge{display:flex;align-items:center;gap:6px;background:rgba(255,153,0,.12);border:1px solid rgba(255,153,0,.3);border-radius:20px;padding:4px 12px;font-size:.72rem;color:#ff9900;letter-spacing:.1em}
+    .topbar-left{display:flex;align-items:center;gap:16px}
+    .topbar-right{display:flex;align-items:center;gap:12px}
+    .user-chip{display:flex;align-items:center;gap:6px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.2);border-radius:20px;padding:5px 14px;font-size:.78rem;color:#ff2d78}
+    .btn-simbu{font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.1em;padding:9px 18px;border:2px solid #00d4ff;border-radius:4px;background:transparent;color:#00d4ff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .25s}
+    .btn-simbu:hover{box-shadow:0 0 20px rgba(0,212,255,.4);transform:translateY(-2px)}
+    .btn-logout{font-family:'Orbitron',sans-serif;font-size:.68rem;padding:8px 14px;border:1px solid rgba(255,45,120,.35);border-radius:4px;background:transparent;color:rgba(255,45,120,.7);cursor:pointer;transition:all .25s}
+    .btn-logout:hover{border-color:#ff2d78;color:#ff2d78}
 
-// @Controller serves HTML pages (not REST JSON)
-@Controller
-public class SimbuController {
+    .page-wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:36px 24px 60px}
 
-    // When someone opens http://<ip>:8080/
-    // Spring serves the file: src/main/resources/static/index.html
-    // automatically — no extra code needed!
+    .welcome-banner{background:linear-gradient(135deg,rgba(255,45,120,.08),rgba(123,47,255,.08));border:1px solid rgba(255,45,120,.18);border-radius:12px;padding:28px 32px;margin-bottom:30px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+    .welcome-banner h1{font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:700;color:#ff2d78;letter-spacing:.08em}
+    .welcome-banner p{margin-top:6px;font-size:.82rem;color:rgba(200,216,232,.55)}
+    .acc-label{font-size:.68rem;color:rgba(200,216,232,.4);letter-spacing:.15em;text-transform:uppercase}
+    .acc-value{font-size:1rem;color:#ff9900;margin-top:4px;text-align:right}
 
-    // This endpoint is just a health check
-    @GetMapping("/health")
-    public org.springframework.http.ResponseEntity<String> health() {
-        return org.springframework.http.ResponseEntity.ok("Simbu App is Running OK!");
-    }
-}
+    .status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:30px}
+    .status-card{background:#0f1629;border-radius:10px;padding:20px 22px;border:1px solid #1e3a5f;transition:border-color .25s}
+    .status-card:hover{border-color:rgba(255,45,120,.3)}
+    .status-card .s-icon{font-size:1.6rem;margin-bottom:8px}
+    .status-card .s-label{font-size:.68rem;color:rgba(200,216,232,.4);letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px}
+    .status-card .s-value{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:700}
+    .c-green{color:#00ff88} .c-aws{color:#ff9900} .c-blue{color:#00d4ff} .c-purple{color:#7b2fff}
 
+    .section-title{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;color:#ff2d78;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid rgba(255,45,120,.2);display:flex;align-items:center;gap:8px;letter-spacing:.08em}
+
+    .info-table{background:#0f1629;border:1px solid #1e3a5f;border-radius:10px;overflow:hidden;margin-bottom:30px}
+    .info-row{display:flex;align-items:center;padding:14px 22px;border-bottom:1px solid #1e3a5f;gap:20px}
+    .info-row:last-child{border-bottom:none}
+    .info-row:hover{background:rgba(255,45,120,.03)}
+    .info-key{font-size:.72rem;color:rgba(200,216,232,.45);letter-spacing:.15em;text-transform:uppercase;min-width:180px;flex-shrink:0}
+    .info-val{font-size:.88rem;color:#c8d8e8;word-break:break-all}
+    .info-val code{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);border-radius:3px;padding:2px 8px;color:#00d4ff;font-family:'Share Tech Mono',monospace;font-size:.85em}
+    .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#00ff88;box-shadow:0 0 8px #00ff88;margin-right:8px;animation:blink 2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+    .policies-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:32px}
+    .policy-card{background:#0f1629;border:1px solid #1e3a5f;border-radius:8px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;transition:border-color .2s}
+    .policy-card:hover{border-color:rgba(255,153,0,.35)}
+    .policy-card .p-icon{font-size:1.3rem;flex-shrink:0}
+    .policy-card .p-name{font-size:.82rem;color:#ff9900;margin-bottom:3px;font-weight:bold}
+    .policy-card .p-desc{font-size:.71rem;color:rgba(200,216,232,.4);line-height:1.5}
+
+    .cta-bar{background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(123,47,255,.06));border:1px solid rgba(0,212,255,.18);border-radius:12px;padding:26px 30px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+    .cta-bar h2{font-family:'Orbitron',sans-serif;font-size:.95rem;color:#00d4ff;letter-spacing:.1em}
+    .cta-bar p{margin-top:5px;font-size:.77rem;color:rgba(200,216,232,.45)}
+    .btn-goto{font-family:'Orbitron',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.13em;padding:13px 28px;border:2px solid #00d4ff;border-radius:6px;background:rgba(0,212,255,.1);color:#00d4ff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .25s}
+    .btn-goto:hover{background:rgba(0,212,255,.18);box-shadow:0 0 28px rgba(0,212,255,.35);transform:translateY(-2px)}
+
+    footer{position:relative;z-index:1;text-align:center;padding:28px;font-size:.7rem;color:rgba(200,216,232,.2);letter-spacing:.12em}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-small">RAEGAN</div>
+    <div class="aws-badge">&#9729; AWS IAM Console</div>
+  </div>
+  <div class="topbar-right">
+    <div class="user-chip">&#128100; <span id="navUser">user</span></div>
+    <a href="/index.html" class="btn-simbu">&#9096; SIMBU HUB &#8594;</a>
+    <button class="btn-logout" onclick="logout()">&#9211; Logout</button>
+  </div>
+</div>
+
+<div class="page-wrap">
+
+  <div class="welcome-banner">
+    <div>
+      <h1>Welcome back, <span id="welcomeName">&#8212;</span> &#10022;</h1>
+      <p>You are signed into the AWS IAM Management Console &nbsp;|&nbsp; Session active</p>
+    </div>
+    <div>
+      <div class="acc-label">Account ID</div>
+      <div class="acc-value" id="accId">&#8212;</div>
+    </div>
+  </div>
+
+  <div class="status-grid">
+    <div class="status-card"><div class="s-icon">&#9989;</div><div class="s-label">Auth Status</div><div class="s-value c-green">ACTIVE</div></div>
+    <div class="status-card"><div class="s-icon">&#128272;</div><div class="s-label">MFA</div><div class="s-value c-aws">ENABLED</div></div>
+    <div class="status-card"><div class="s-icon">&#128203;</div><div class="s-label">Policies</div><div class="s-value c-blue">4</div></div>
+    <div class="status-card"><div class="s-icon">&#127758;</div><div class="s-label">Region</div><div class="s-value c-purple">ap-south-1</div></div>
+  </div>
+
+  <div class="section-title">&#128273; IAM User Details</div>
+  <div class="info-table">
+    <div class="info-row"><div class="info-key">Account ID</div><div class="info-val"><code id="detailId">&#8212;</code></div></div>
+    <div class="info-row"><div class="info-key">IAM Username</div><div class="info-val" id="detailUser">&#8212;</div></div>
+    <div class="info-row"><div class="info-key">ARN</div><div class="info-val"><code id="detailArn">&#8212;</code></div></div>
+    <div class="info-row"><div class="info-key">Console Access</div><div class="info-val"><span class="dot"></span>Enabled</div></div>
+    <div class="info-row"><div class="info-key">Login Time</div><div class="info-val" id="loginTime">&#8212;</div></div>
+    <div class="info-row"><div class="info-key">Access Keys</div><div class="info-val c-aws">Programmatic Access &#8212; Active</div></div>
+  </div>
+
+  <div class="section-title">&#128203; Attached IAM Policies</div>
+  <div class="policies-grid">
+    <div class="policy-card"><div class="p-icon">&#128737;</div><div><div class="p-name">AmazonEC2FullAccess</div><div class="p-desc">Full access to Amazon EC2 resources</div></div></div>
+    <div class="policy-card"><div class="p-icon">&#129395;</div><div><div class="p-name">AmazonS3FullAccess</div><div class="p-desc">Full access to all S3 buckets and objects</div></div></div>
+    <div class="policy-card"><div class="p-icon">&#9096;</div><div><div class="p-name">AmazonEKSClusterPolicy</div><div class="p-desc">Permissions for EKS cluster operations</div></div></div>
+    <div class="policy-card"><div class="p-icon">&#128230;</div><div><div class="p-name">AmazonECRFullAccess</div><div class="p-desc">Full access to Elastic Container Registry</div></div></div>
+  </div>
+
+  <div class="cta-bar">
+    <div>
+      <h2>&#9096; Proceed to SIMBU DevOps Hub</h2>
+      <p>Access Git, Docker, Jenkins, Kubernetes, Terraform, Ansible &amp; Cloud commands</p>
+    </div>
+    <a href="/index.html" class="btn-goto">GO TO SIMBU HUB &#8594;</a>
+  </div>
+
+</div>
+
+<footer>RAEGAN AWS IAM Dashboard &nbsp;|&nbsp; AWS Identity &amp; Access Management</footer>
+
+<script>
+  // Auth guard — bounce back to login if not authenticated
+  if (sessionStorage.getItem('iam_auth') !== 'true') {
+    window.location.href = '/raegan.html';
+  }
+
+  var username = sessionStorage.getItem('iam_username') || 'user';
+  var id       = sessionStorage.getItem('iam_id')       || '—';
+  var now      = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+  document.getElementById('navUser').textContent      = username;
+  document.getElementById('welcomeName').textContent  = username;
+  document.getElementById('accId').textContent        = id;
+  document.getElementById('detailId').textContent     = id;
+  document.getElementById('detailUser').textContent   = username;
+  document.getElementById('detailArn').textContent    = 'arn:aws:iam::' + id + ':user/' + username;
+  document.getElementById('loginTime').textContent    = now + ' IST';
+
+  function logout() {
+    sessionStorage.clear();
+    window.location.href = '/raegan.html';
+  }
+</script>
+</body>
+</html>
