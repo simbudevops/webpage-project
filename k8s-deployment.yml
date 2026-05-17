@@ -6,25 +6,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: simbu-app               # Name of this deployment
+  name: raegan-app               # Name of this deployment
   labels:
-    app: simbu-app
+    app: raegan-app
 
 spec:
   replicas: 2                   # Run 2 copies (pods) for high availability
 
   selector:
     matchLabels:
-      app: simbu-app            # Manage pods with this label
+      app: raegan-app          # Manage pods with this label
 
   template:
     metadata:
       labels:
-        app: simbu-app          # Label on each pod
+        app: raegan-app         # Label on each pod
 
     spec:
       containers:
-        - name: simbu-app
+        - name: raegan-app
           # ⚠️ CHANGE: Replace YOURDOCKERHUBUSERNAME below
           image: simbudevops7497/simbu-app:1.0
 
