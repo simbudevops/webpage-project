@@ -5,6 +5,7 @@ pipeline {
         DOCKERHUB_USERNAME = "simbudevops7497"
         IMAGE_NAME         = "simbu-app"
         DOCKERHUB_CREDS    = "dockerhub-creds"
+        GITHUB_CREDS       = "github-creds"
         SONAR_SERVER       = "SonarQube"
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
     }
@@ -15,7 +16,6 @@ pipeline {
                 sh '''
                     echo "=== Installing Required Tools ==="
                     sudo apt-get update -y
-                    echo "Installing Java 17..."
                     sudo apt-get install -y openjdk-17-jdk
                     sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 2
                     sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 2
@@ -25,7 +25,6 @@ pipeline {
                     export PATH=$JAVA_HOME/bin:$PATH
                     java -version
                     if ! mvn -version 2>/dev/null; then
-                        echo "Installing Maven..."
                         sudo apt-get install -y maven
                     else
                         echo "Maven already installed"
@@ -34,7 +33,6 @@ pipeline {
                     sudo ln -sf /usr/share/maven/bin/mvn /usr/bin/mvn
                     mvn -version
                     if ! docker --version 2>/dev/null; then
-                        echo "Installing Docker..."
                         sudo apt-get install -y docker.io
                         sudo systemctl start docker
                         sudo systemctl enable docker
@@ -44,7 +42,6 @@ pipeline {
                     sudo chmod 666 /var/run/docker.sock
                     docker --version
                     if ! kubectl version --client 2>/dev/null; then
-                        echo "Installing kubectl..."
                         sudo snap install kubectl --classic
                     else
                         echo "kubectl already installed"
@@ -53,9 +50,7 @@ pipeline {
                     if docker ps | grep -q sonarqube; then
                         echo "SonarQube already running"
                     else
-                        echo "Starting SonarQube..."
                         docker run -d --name sonarqube -p 9000:9000 sonarqube:lts-community
-                        echo "Waiting for SonarQube to be ready..."
                         sleep 60
                     fi
                     echo "=== All Tools Ready ==="
@@ -93,6 +88,7 @@ pipeline {
 
                     if (branch == 'master') {
                         env.IMAGE_TAG = 'latest'
+                        echo "=== Branch 'master' → tag: latest ==="
                     } else if (versions.containsKey(branch)) {
                         env.IMAGE_TAG = versions[branch]
                         echo "=== Existing branch '${branch}' → tag: ${env.IMAGE_TAG} ==="
@@ -114,13 +110,20 @@ pipeline {
                         def content = versions.collect { b, t -> "${b}=${t}" }.join('\n')
                         writeFile file: versionFile, text: content
 
-                        sh """
-                            git config user.email "jenkins@simbu.com"
-                            git config user.name "Jenkins"
-                            git add ${versionFile}
-                            git commit -m "Auto: assign ${nextVersion} to branch ${branch}"
-                            git push origin ${branch}
-                        """
+                        withCredentials([usernamePassword(
+                            credentialsId: "${GITHUB_CREDS}",
+                            usernameVariable: 'GIT_USER',
+                            passwordVariable: 'GIT_PASS'
+                        )]) {
+                            sh """
+                                git config user.email "jenkins@simbu.com"
+                                git config user.name "Jenkins"
+                                git remote set-url origin https://\${GIT_USER}:\${GIT_PASS}@github.com/simbudevops/webpage-project.git
+                                git add ${versionFile}
+                                git commit -m "Auto: assign ${nextVersion} to branch ${branch}"
+                                git push origin ${branch}
+                            """
+                        }
                     }
 
                     env.FULL_IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${env.IMAGE_TAG}"
@@ -134,7 +137,6 @@ pipeline {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
-                    java -version
                     mvn clean compile
                 '''
             }
