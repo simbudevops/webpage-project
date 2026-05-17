@@ -74,14 +74,11 @@ pipeline {
                 script {
                     def branch = env.CURRENT_BRANCH
 
-                    // master always gets latest
-                    // dev gets v1, any new branch gets its name as tag
                     if (branch == 'master') {
                         env.IMAGE_TAG = 'latest'
                     } else if (branch == 'dev') {
                         env.IMAGE_TAG = 'v1'
                     } else {
-                        // any future branch like v2, v3, feature-x → use branch name as tag
                         env.IMAGE_TAG = branch
                     }
 
@@ -183,9 +180,12 @@ pipeline {
                     sudo chmod 600 /var/lib/jenkins/.kube/config
                     export KUBECONFIG=/var/lib/jenkins/.kube/config
                     kubectl get nodes
+
+                    sed -i "s|IMAGE_PLACEHOLDER|${FULL_IMAGE}|g" k8s-deployment.yml
+
                     kubectl apply -f k8s-deployment.yml --validate=false
                     kubectl apply -f k8s-service.yml --validate=false
-                    kubectl rollout status deployment/simbu-app --timeout=120s
+                    kubectl rollout status deployment/raegan-app --timeout=120s
                     kubectl get pods
                     kubectl get svc
                 '''
