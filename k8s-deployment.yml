@@ -1,29 +1,55 @@
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: raegan-app
-  labels:
-    app: raegan-app
+
 spec:
   replicas: 2
+
   selector:
     matchLabels:
       app: raegan-app
+
   template:
     metadata:
       labels:
         app: raegan-app
+
     spec:
       containers:
         - name: raegan-app
+
           image: IMAGE_PLACEHOLDER
+
           imagePullPolicy: Always
+
           ports:
             - containerPort: 8080
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+
           resources:
             requests:
-              memory: "256Mi"
-              cpu: "250m"
-            limits:
               memory: "512Mi"
-              cpu: "500m"
+              cpu: "250m"
+
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
