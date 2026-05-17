@@ -182,9 +182,8 @@ pipeline {
                     export KUBECONFIG=/var/lib/jenkins/.kube/config
                     kubectl get nodes
 
-                    kubectl apply -f k8s-deployment.yml --validate=false
-                    kubectl apply -f k8s-service.yml --validate=false
-                    kubectl rollout status deployment/simbu-app --timeout=120s
+                    kubectl apply -f k8s-deployment.yml 
+                    kubectl apply -f k8s-service.yml 
                     kubectl get pods
                     kubectl get svc
                 '''
