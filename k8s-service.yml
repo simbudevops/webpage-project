@@ -1,38 +1,13 @@
-# ═══════════════════════════════════════════════════════════
-# k8s-service.yml
-# Exposes the app so you can access it with IP:PORT
-# NodePort type = accessible from outside the cluster
-# ═══════════════════════════════════════════════════════════
-
 apiVersion: v1
 kind: Service
 metadata:
-  name: raegan-service           # Name of this service
-
+  name: raegan-service
 spec:
-  type: NodePort                # Exposes app on a port on the Node (server)
-
+  type: NodePort
   selector:
-    app: raegan-app          # Route traffic to pods with this label
-
+    app: raegan-app
   ports:
-    - protocol: TCP
-      port: 80                  # Port inside the cluster
-      targetPort: 8080          # Port our Spring Boot app uses
-      nodePort: 30090           # External port — access via IP:30080
-
-# ─────────────────────────────────────────────────────────────
-# HOW TO ACCESS AFTER APPLYING:
-#
-# On Minikube (local):
-#   minikube service simbu-service --url
-#   → gives you the URL to open
-#
-# On a real server / cloud VM:
-#   Open browser: http://<your-server-ip>:30080
-#
-# On AWS EKS (cloud):
-#   Change type: NodePort → type: LoadBalancer
-#   Then: kubectl get svc simbu-service
-#   Use the EXTERNAL-IP shown
-# ─────────────────────────────────────────────────────────────
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+    nodePort: 30091
