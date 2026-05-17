@@ -7,18 +7,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class SimbuController {
 
-    /**
-     * Redirect root "/" → raegan.html (Page 1: Raegan AWS IAM Login)
-     * Flow: raegan.html → dashboard.html → index.html (Simbu Hub)
-     */
-    @GetMapping("/")
-    public String root() {
-        return "redirect:/raegan.html";
-    }
+    // When someone opens http://<ip>:8080/
+    // Spring serves the file: src/main/resources/static/index.html
+    // automatically — no extra code needed!
 
-    // Health check endpoint
+    // This endpoint is just a health check
     @GetMapping("/health")
     public org.springframework.http.ResponseEntity<String> health() {
         return org.springframework.http.ResponseEntity.ok("Simbu App is Running OK!");
     }
 }
+
