@@ -3,7 +3,7 @@ pipeline {
     environment {
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
         DOCKERHUB_USERNAME = "simbudevops7497"
-        IMAGE_NAME         = "simbu-app"
+        IMAGE_NAME         = "raegan-IAM-app"
         IMAGE_TAG          = "1.0"
         FULL_IMAGE         = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
         DOCKERHUB_CREDS    = "dockerhub-creds"
