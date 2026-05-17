@@ -5,9 +5,9 @@ pipeline {
         DOCKERHUB_USERNAME = "simbudevops7497"
         IMAGE_NAME         = "simbu-app"
         DOCKERHUB_CREDS    = "dockerhub-creds"
-        GITHUB_CREDS       = "github-creds"
         SONAR_SERVER       = "SonarQube"
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
+        GITHUB_TOKEN       = credentials('github-token')
     }
     stages {
 
@@ -110,20 +110,14 @@ pipeline {
                         def content = versions.collect { b, t -> "${b}=${t}" }.join('\n')
                         writeFile file: versionFile, text: content
 
-                        withCredentials([usernamePassword(
-                            credentialsId: "${GITHUB_CREDS}",
-                            usernameVariable: 'GIT_USER',
-                            passwordVariable: 'GIT_PASS'
-                        )]) {
-                            sh """
-                                git config user.email "jenkins@simbu.com"
-                                git config user.name "Jenkins"
-                                git remote set-url origin https://\${GIT_USER}:\${GIT_PASS}@github.com/simbudevops/webpage-project.git
-                                git add ${versionFile}
-                                git commit -m "Auto: assign ${nextVersion} to branch ${branch}"
-                                git push origin ${branch}
-                            """
-                        }
+                        sh """
+                            git config user.email "jenkins@simbu.com"
+                            git config user.name "Jenkins"
+                            git remote set-url origin https://simbudevops:${GITHUB_TOKEN}@github.com/simbudevops/webpage-project.git
+                            git add ${versionFile}
+                            git commit -m "Auto: assign ${nextVersion} to branch ${branch}"
+                            git push origin ${branch}
+                        """
                     }
 
                     env.FULL_IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${env.IMAGE_TAG}"
