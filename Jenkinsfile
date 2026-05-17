@@ -2,7 +2,6 @@ pipeline {
     agent any
     environment {
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
-        GIT_BRANCH         = "master"
         DOCKERHUB_USERNAME = "simbudevops7497"
         IMAGE_NAME         = "simbu-app"
         IMAGE_TAG          = "1.0"
