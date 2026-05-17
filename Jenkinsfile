@@ -3,9 +3,7 @@ pipeline {
     environment {
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
         DOCKERHUB_USERNAME = "simbudevops7497"
-        IMAGE_NAME         = "raegan-IAM-app"
-        IMAGE_TAG          = "1.0"
-        FULL_IMAGE         = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
+        IMAGE_NAME         = "simbu-app"
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
@@ -16,65 +14,36 @@ pipeline {
             steps {
                 sh '''
                     echo "=== Installing Required Tools ==="
-
                     sudo apt-get update -y
-
                     echo "Installing Java 17..."
                     sudo apt-get install -y openjdk-17-jdk
-
                     sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 2
-                    sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 2
                     sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-                    sudo update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
-
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
                     java -version
-
                     if ! mvn -version 2>/dev/null; then
-                        echo "Installing Maven..."
                         sudo apt-get install -y maven
-                    else
-                        echo "Maven already installed"
                     fi
                     sudo ln -sf /usr/share/maven/bin/mvn /usr/local/bin/mvn
-                    sudo ln -sf /usr/share/maven/bin/mvn /usr/bin/mvn
-
-                    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-                    export PATH=$JAVA_HOME/bin:$PATH
                     mvn -version
-
                     if ! docker --version 2>/dev/null; then
-                        echo "Installing Docker..."
                         sudo apt-get install -y docker.io
                         sudo systemctl start docker
                         sudo systemctl enable docker
-                    else
-                        echo "Docker already installed"
                     fi
                     sudo chmod 666 /var/run/docker.sock
                     docker --version
-
                     if ! kubectl version --client 2>/dev/null; then
-                        echo "Installing kubectl..."
                         sudo snap install kubectl --classic
-                    else
-                        echo "kubectl already installed"
                     fi
                     kubectl version --client
-
-                    echo "Checking SonarQube..."
                     if docker ps | grep -q sonarqube; then
                         echo "SonarQube already running"
                     else
-                        echo "Starting SonarQube..."
-                        docker run -d --name sonarqube \
-                            -p 9000:9000 \
-                            sonarqube:lts-community
-                        echo "Waiting for SonarQube to be ready..."
+                        docker run -d --name sonarqube -p 9000:9000 sonarqube:lts-community
                         sleep 60
                     fi
-
                     echo "=== All Tools Ready ==="
                 '''
             }
@@ -83,7 +52,62 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 echo '=== Pulling code from GitHub ==='
-                git branch: "${GIT_BRANCH}", url: "${GIT_REPO}"
+                git branch: "${env.BRANCH_NAME}", url: "${GIT_REPO}"
+            }
+        }
+
+        stage('Assign Image Tag') {
+            steps {
+                script {
+                    def branch = env.BRANCH_NAME
+                    def versionFile = "branch-versions.txt"
+                    def versions = [:]
+
+                    // Read existing versions
+                    if (fileExists(versionFile)) {
+                        readFile(versionFile).trim().split('\n').each { line ->
+                            def parts = line.split('=')
+                            if (parts.size() == 2) {
+                                versions[parts[0].trim()] = parts[1].trim()
+                            }
+                        }
+                    }
+
+                    // Assign tag
+                    if (branch == 'master') {
+                        env.IMAGE_TAG = 'latest'
+                    } else if (versions.containsKey(branch)) {
+                        // Already has a version assigned
+                        env.IMAGE_TAG = versions[branch]
+                    } else {
+                        // New branch — assign next version number
+                        def maxVersion = 0
+                        versions.each { b, tag ->
+                            if (tag.startsWith('v')) {
+                                def num = tag.replace('v', '').toInteger()
+                                if (num > maxVersion) maxVersion = num
+                            }
+                        }
+                        def nextVersion = "v${maxVersion + 1}"
+                        env.IMAGE_TAG = nextVersion
+                        versions[branch] = nextVersion
+
+                        // Save back to file and commit
+                        def content = versions.collect { b, t -> "${b}=${t}" }.join('\n')
+                        writeFile file: versionFile, text: content
+                        sh """
+                            git config user.email "jenkins@simbu.com"
+                            git config user.name "Jenkins"
+                            git add ${versionFile}
+                            git commit -m "Auto: assign ${nextVersion} to branch ${branch}"
+                            git push origin ${branch}
+                        """
+                    }
+
+                    env.FULL_IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${env.IMAGE_TAG}"
+                    echo "=== Branch: ${branch} → Image Tag: ${env.IMAGE_TAG} ==="
+                    echo "=== Full Image: ${env.FULL_IMAGE} ==="
+                }
             }
         }
 
@@ -92,7 +116,6 @@ pipeline {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
-                    java -version
                     mvn clean compile
                 '''
             }
@@ -177,10 +200,8 @@ pipeline {
                     sudo cp /home/ubuntu/.kube/config /var/lib/jenkins/.kube/config
                     sudo chown jenkins:jenkins /var/lib/jenkins/.kube/config
                     sudo chmod 600 /var/lib/jenkins/.kube/config
-
                     export KUBECONFIG=/var/lib/jenkins/.kube/config
                     kubectl get nodes
-
                     kubectl apply -f k8s-deployment.yml --validate=false
                     kubectl apply -f k8s-service.yml --validate=false
                     kubectl rollout status deployment/simbu-app --timeout=120s
@@ -189,8 +210,8 @@ pipeline {
                 '''
             }
         }
-
     }
+
     post {
         success {
             echo 'PIPELINE SUCCESS! App is live.'
