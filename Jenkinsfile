@@ -1,4 +1,4 @@
-pipeline {
+pipeline { 
     agent any
     environment {
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
