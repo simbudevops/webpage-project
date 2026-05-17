@@ -19,7 +19,7 @@ spec:
     - protocol: TCP
       port: 80                  # Port inside the cluster
       targetPort: 8080          # Port our Spring Boot app uses
-      nodePort: 30080           # External port — access via IP:30080
+      nodePort: 30090           # External port — access via IP:30080
 
 # ─────────────────────────────────────────────────────────────
 # HOW TO ACCESS AFTER APPLYING:
