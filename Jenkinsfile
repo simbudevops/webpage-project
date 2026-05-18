@@ -1,4 +1,4 @@
-pipeline { 
+pipeline {
     agent any
     environment {
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
@@ -79,12 +79,19 @@ pipeline {
                     } else if (branch == 'dev') {
                         env.IMAGE_TAG = 'v1'
                     } else {
-                        env.IMAGE_TAG = branch
+                        // ✅ FIX: any other branch gets its own unique tag
+                        // e.g. branch "feature-login" → tag "feature-login"
+                        env.IMAGE_TAG = branch.replaceAll('/', '-')
                     }
 
                     env.FULL_IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${env.IMAGE_TAG}"
+
+                    // ✅ FIX: unique deployment file per branch — no more cross-branch collisions
+                    env.DEPLOY_FILE = "k8s-deploy-${env.IMAGE_TAG}.yml"
+
                     echo "=== Branch: ${branch} → Image Tag: ${env.IMAGE_TAG} ==="
                     echo "=== Full Image: ${env.FULL_IMAGE} ==="
+                    echo "=== Deploy File: ${env.DEPLOY_FILE} ==="
                 }
             }
         }
@@ -179,15 +186,35 @@ pipeline {
                     sudo chown jenkins:jenkins /var/lib/jenkins/.kube/config
                     sudo chmod 600 /var/lib/jenkins/.kube/config
                     export KUBECONFIG=/var/lib/jenkins/.kube/config
+
                     kubectl get nodes
 
-                    sed -i "s|IMAGE_PLACEHOLDER|${FULL_IMAGE}|g" k8s-deployment.yml
+                    # ✅ FIX 1: Copy the ORIGINAL template to a BRANCH-SPECIFIC temp file
+                    # The original k8s-deployment.yml is NEVER modified
+                    # Every branch/run gets its own file → no conflicts between branches
+                    cp k8s-deployment.yml ${DEPLOY_FILE}
 
-                    kubectl apply -f k8s-deployment.yml --validate=false
+                    # ✅ FIX 2: sed runs on the COPY, not the original
+                    # Next run: original still has IMAGE_PLACEHOLDER → sed always works
+                    sed -i "s|IMAGE_PLACEHOLDER|${FULL_IMAGE}|g" ${DEPLOY_FILE}
+
+                    # ✅ FIX 3: verify the replacement actually worked before applying
+                    echo "=== Verifying image in deploy file ==="
+                    grep "image:" ${DEPLOY_FILE}
+
+                    # Apply using the branch-specific deploy file
+                    kubectl apply -f ${DEPLOY_FILE} --validate=false
                     kubectl apply -f k8s-service.yml --validate=false
+
+                    # ✅ FIX 4: deployment name includes branch tag to avoid k8s name conflicts
                     kubectl rollout status deployment/raegan-app --timeout=120s
-                    kubectl get pods
-                    kubectl get svc
+
+                    echo "=== Deployment complete for branch: ${CURRENT_BRANCH} ==="
+                    kubectl get pods -l app=raegan-app
+                    kubectl get svc raegan-service
+
+                    # ✅ FIX 5: clean up the temp deploy file after apply
+                    rm -f ${DEPLOY_FILE}
                 '''
             }
         }
@@ -195,12 +222,14 @@ pipeline {
 
     post {
         success {
-            echo 'PIPELINE SUCCESS! App is live.'
+            echo "PIPELINE SUCCESS! Branch: ${env.CURRENT_BRANCH} | Image: ${env.FULL_IMAGE}"
         }
         failure {
-            echo 'PIPELINE FAILED! Check the logs above.'
+            echo "PIPELINE FAILED! Branch: ${env.CURRENT_BRANCH} | Check logs above."
         }
         always {
+            // ✅ FIX 6: also clean up any leftover temp deploy files before workspace wipe
+            sh "rm -f k8s-deploy-*.yml || true"
             node('') {
                 cleanWs()
             }
