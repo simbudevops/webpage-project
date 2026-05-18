@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RAEGAN - AWS IAM Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+
+  <!-- ✅ AWS Cognito SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js/dist/amazon-cognito-identity.min.js"></script>
+
   <style>
     :root {
       --bg: #0a0e1a;
@@ -29,8 +33,6 @@
       justify-content: center;
       overflow-x: hidden;
     }
-
-    /* Animated grid background */
     body::before {
       content: '';
       position: fixed;
@@ -42,8 +44,6 @@
       pointer-events: none;
       z-index: 0;
     }
-
-    /* Glowing orb top-right */
     body::after {
       content: '';
       position: fixed;
@@ -54,8 +54,6 @@
       pointer-events: none;
       z-index: 0;
     }
-
-    /* ── HEADER ── */
     header {
       position: relative;
       z-index: 1;
@@ -71,7 +69,6 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      filter: drop-shadow(0 0 30px rgba(255,45,120,0.5));
       animation: pulse 3s ease-in-out infinite;
     }
     @keyframes pulse {
@@ -85,8 +82,6 @@
       letter-spacing: 0.25em;
       opacity: 0.75;
     }
-
-    /* ── LOGIN CARD ── */
     .login-card {
       position: relative;
       z-index: 1;
@@ -95,10 +90,8 @@
       border-radius: 12px;
       padding: 40px 44px;
       width: 100%;
-      max-width: 440px;
-      box-shadow:
-        0 0 40px rgba(255,45,120,0.08),
-        inset 0 0 40px rgba(255,45,120,0.03);
+      max-width: 460px;
+      box-shadow: 0 0 40px rgba(255,45,120,0.08), inset 0 0 40px rgba(255,45,120,0.03);
     }
     .card-header {
       display: flex;
@@ -123,16 +116,23 @@
       color: #ff9900;
       letter-spacing: 0.1em;
     }
-    .card-sub {
-      font-size: 0.72rem;
-      color: rgba(200,216,232,0.45);
-      margin-top: 2px;
-    }
+    .card-sub { font-size: 0.72rem; color: rgba(200,216,232,0.45); margin-top: 2px; }
 
-    /* ── FORM FIELDS ── */
-    .field {
-      margin-bottom: 22px;
+    /* ── CONFIG NOTICE ── */
+    .config-notice {
+      background: rgba(255,153,0,0.1);
+      border: 1px solid rgba(255,153,0,0.35);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.75rem;
+      color: #ff9900;
+      margin-bottom: 20px;
+      letter-spacing: 0.04em;
+      display: none; /* shown only when POOL_ID is placeholder */
     }
+    .config-notice.show { display: block; }
+
+    .field { margin-bottom: 22px; }
     label {
       display: block;
       font-size: 0.72rem;
@@ -142,13 +142,10 @@
       margin-bottom: 8px;
     }
     label span.required { color: var(--accent); margin-left: 2px; }
-    .input-wrap {
-      position: relative;
-    }
+    .input-wrap { position: relative; }
     .input-icon {
       position: absolute;
-      left: 14px;
-      top: 50%;
+      left: 14px; top: 50%;
       transform: translateY(-50%);
       font-size: 1rem;
       pointer-events: none;
@@ -167,45 +164,69 @@
       font-size: 0.92rem;
       outline: none;
       transition: border-color 0.25s, box-shadow 0.25s;
+      -moz-appearance: textfield;
     }
-    input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(255,45,120,0.12);
-    }
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,45,120,0.12); }
     input::placeholder { color: rgba(200,216,232,0.25); }
-
-    /* Toggle password visibility */
     .toggle-pw {
       position: absolute;
-      right: 14px;
-      top: 50%;
+      right: 14px; top: 50%;
       transform: translateY(-50%);
       cursor: pointer;
       font-size: 1rem;
       opacity: 0.4;
       transition: opacity 0.2s;
-      background: none;
-      border: none;
-      color: var(--text);
-      padding: 0;
+      background: none; border: none;
+      color: var(--text); padding: 0;
     }
     .toggle-pw:hover { opacity: 0.9; }
 
-    /* ── ERROR ── */
-    .error-msg {
+    /* ── MESSAGES ── */
+    .msg-box {
       display: none;
-      background: rgba(255,45,120,0.1);
-      border: 1px solid rgba(255,45,120,0.35);
       border-radius: 6px;
       padding: 10px 14px;
       font-size: 0.8rem;
-      color: var(--accent);
       margin-bottom: 20px;
       letter-spacing: 0.05em;
     }
-    .error-msg.show { display: block; }
+    .msg-box.show { display: block; }
+    .msg-box.error {
+      background: rgba(255,45,120,0.1);
+      border: 1px solid rgba(255,45,120,0.35);
+      color: var(--accent);
+    }
+    .msg-box.warn {
+      background: rgba(255,153,0,0.1);
+      border: 1px solid rgba(255,153,0,0.35);
+      color: #ff9900;
+    }
+    .msg-box.success {
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.3);
+      color: var(--green);
+    }
 
-    /* ── LOGIN BUTTON ── */
+    /* ── NEW PASSWORD PANEL ── */
+    .new-pw-panel {
+      display: none;
+      background: rgba(0,212,255,0.05);
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .new-pw-panel.show { display: block; }
+    .new-pw-panel h4 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.78rem;
+      color: #00d4ff;
+      margin-bottom: 12px;
+      letter-spacing: 0.1em;
+    }
+
     .btn-login {
       width: 100%;
       padding: 14px;
@@ -223,37 +244,26 @@
       position: relative;
       overflow: hidden;
     }
-    .btn-login::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,45,120,0.15), rgba(123,47,255,0.15));
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .btn-login:hover::before { opacity: 1; }
     .btn-login:hover {
       box-shadow: 0 0 30px rgba(255,45,120,0.4);
       transform: translateY(-2px);
     }
     .btn-login:active { transform: translateY(0); }
-    .btn-login.loading { opacity: 0.6; pointer-events: none; }
-
-    /* Spinner */
-    .spinner {
-      display: none;
-      width: 16px; height: 16px;
+    .btn-login:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-login .btn-text { display: inline-flex; align-items: center; gap: 8px; }
+    .btn-login .spinner { display: none; }
+    .btn-login.loading .btn-text { display: none; }
+    .btn-login.loading .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
       border: 2px solid rgba(255,45,120,0.3);
       border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       margin: 0 auto;
     }
-    .btn-login.loading .btn-text { display: none; }
-    .btn-login.loading .spinner { display: block; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── FOOTER NOTE ── */
     .secure-note {
       text-align: center;
       margin-top: 22px;
@@ -263,7 +273,38 @@
     }
     .secure-note span { color: var(--green); }
 
-    /* ── PAGE FOOTER ── */
+    /* ── AUTH METHOD TABS ── */
+    .auth-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 9px 12px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-align: center;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      color: rgba(200,216,232,0.35);
+      transition: all 0.2s;
+    }
+    .auth-tab.active {
+      background: rgba(255,45,120,0.12);
+      color: var(--accent);
+    }
+    .auth-tab:not(.active):hover { color: rgba(200,216,232,0.6); }
+
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+
     footer {
       position: relative; z-index: 1;
       margin-top: 40px;
@@ -290,94 +331,352 @@
       </div>
     </div>
 
-    <div class="error-msg" id="errorMsg">
-      ⚠ Invalid credentials. Please check your IAM ID, username and password.
+    <!-- Config warning shown if Cognito Pool ID not set -->
+    <div class="config-notice show" id="configNotice">
+      ⚙ <strong>SETUP REQUIRED:</strong> Replace <code>YOUR_USER_POOL_ID</code> and <code>YOUR_APP_CLIENT_ID</code> in this file with your real AWS Cognito values.
     </div>
 
-    <div class="field">
-      <label>IAM Account ID <span class="required">*</span></label>
-      <div class="input-wrap">
-        <span class="input-icon">🔑</span>
-        <input type="number" id="iamId" placeholder="123456789012" autocomplete="off" />
+    <!-- Auth method tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('cognito')">☁ COGNITO LOGIN</button>
+      <button class="auth-tab" onclick="switchTab('iam')">🔑 IAM ACCESS KEYS</button>
+    </div>
+
+    <!-- Message box (shared) -->
+    <div class="msg-box error" id="msgBox"></div>
+
+    <!-- ══════════════════════════════════════════════
+         TAB 1 — AWS COGNITO (Username + Password)
+         ══════════════════════════════════════════════ -->
+    <div class="auth-panel active" id="panel-cognito">
+
+      <div class="field">
+        <label>AWS Account ID <span class="required">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🔑</span>
+          <input type="number" id="cognitoAccountId" placeholder="123456789012" autocomplete="off" />
+        </div>
       </div>
-    </div>
 
-    <div class="field">
-      <label>IAM Username <span class="required">*</span></label>
-      <div class="input-wrap">
-        <span class="input-icon">👤</span>
-        <input type="text" id="iamUsername" placeholder="e.g. raegan-devops" autocomplete="off" />
+      <div class="field">
+        <label>Cognito Username <span class="required">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input type="text" id="cognitoUsername" placeholder="e.g. raegan-devops" autocomplete="off" />
+        </div>
       </div>
-    </div>
 
-    <div class="field">
-      <label>Password <span class="required">*</span></label>
-      <div class="input-wrap">
-        <span class="input-icon">🔒</span>
-        <input type="password" id="iamPassword" placeholder="••••••••••••" autocomplete="off" />
-        <button class="toggle-pw" onclick="togglePw()" id="toggleBtn" title="Show/Hide password">👁</button>
+      <div class="field">
+        <label>Password <span class="required">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="cognitoPassword" placeholder="••••••••••••" autocomplete="off" />
+          <button class="toggle-pw" onclick="togglePw('cognitoPassword', this)">👁</button>
+        </div>
       </div>
+
+      <!-- New password required panel (first-time login) -->
+      <div class="new-pw-panel" id="newPwPanel">
+        <h4>⚡ NEW PASSWORD REQUIRED</h4>
+        <div class="field" style="margin-bottom:0">
+          <label>Set New Password <span class="required">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="newPassword" placeholder="Min 8 chars, upper+lower+number" autocomplete="off" />
+            <button class="toggle-pw" onclick="togglePw('newPassword', this)">👁</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-login" id="cognitoBtn" onclick="doCognitoLogin()">
+        <span class="btn-text">⚡ Sign In with AWS Cognito</span>
+        <div class="spinner"></div>
+      </button>
     </div>
 
-    <button class="btn-login" id="loginBtn" onclick="doLogin()">
-      <span class="btn-text">⚡ Sign in to AWS IAM</span>
-      <div class="spinner"></div>
-    </button>
+    <!-- ══════════════════════════════════════════════
+         TAB 2 — IAM ACCESS KEY (Backend STS verify)
+         ══════════════════════════════════════════════ -->
+    <div class="auth-panel" id="panel-iam">
 
-    <p class="secure-note"><span>🔐</span> Connection is encrypted &amp; secured via AWS IAM</p>
+      <div class="field">
+        <label>AWS Account ID <span class="required">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🔑</span>
+          <input type="number" id="iamAccountId" placeholder="123456789012" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>IAM Username <span class="required">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input type="text" id="iamUsername" placeholder="e.g. raegan-devops" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>IAM Access Key ID <span class="required">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🗝</span>
+          <input type="text" id="iamAccessKey" placeholder="AKIAIOSFODNN7EXAMPLE" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>IAM Secret Access Key <span class="required">*</span></label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="iamSecretKey" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCY..." autocomplete="off" />
+          <button class="toggle-pw" onclick="togglePw('iamSecretKey', this)">👁</button>
+        </div>
+      </div>
+
+      <button class="btn-login" id="iamBtn" onclick="doIAMLogin()">
+        <span class="btn-text">⚡ Verify via AWS STS</span>
+        <div class="spinner"></div>
+      </button>
+    </div>
+
+    <p class="secure-note"><span>🔐</span> Connection secured via AWS IAM Authentication</p>
   </div>
 
-  <footer>RAEGAN DevOps Portal &nbsp;|&nbsp; AWS IAM Integration</footer>
+  <footer>RAEGAN DevOps Portal &nbsp;|&nbsp; AWS IAM Integration &nbsp;|&nbsp; Real Auth</footer>
 
 <script>
-  function togglePw() {
-    const pw = document.getElementById('iamPassword');
-    const btn = document.getElementById('toggleBtn');
-    if (pw.type === 'password') {
-      pw.type = 'text';
-      btn.textContent = '🙈';
-    } else {
-      pw.type = 'password';
-      btn.textContent = '👁';
-    }
+  // ═══════════════════════════════════════════════════════════════
+  //  ✅  STEP 1 — SET YOUR AWS COGNITO VALUES HERE
+  //  Go to: AWS Console → Cognito → User Pools → select your pool
+  // ═══════════════════════════════════════════════════════════════
+  var COGNITO_CONFIG = {
+    UserPoolId : 'YOUR_USER_POOL_ID',    // e.g. 'ap-south-1_AbcDef123'
+    ClientId   : 'YOUR_APP_CLIENT_ID'    // e.g. '1abc2defghij3klmnopqrstu4v'
+  };
+
+  // Hide config notice once real values are set
+  if (COGNITO_CONFIG.UserPoolId !== 'YOUR_USER_POOL_ID') {
+    document.getElementById('configNotice').classList.remove('show');
   }
 
-  function doLogin() {
-    const id       = document.getElementById('iamId').value.trim();
-    const username = document.getElementById('iamUsername').value.trim();
-    const password = document.getElementById('iamPassword').value.trim();
-    const errBox   = document.getElementById('errorMsg');
-    const btn      = document.getElementById('loginBtn');
+  // ── Active Cognito user (needed for newPasswordRequired challenge)
+  var pendingCognitoUser     = null;
+  var pendingUserAttributes  = null;
 
-    // Basic front-end validation
-    if (!id || !username || !password) {
-      errBox.textContent = '⚠ All fields are required. Please fill in IAM ID, username and password.';
-      errBox.classList.add('show');
-      return;
-    }
-    if (id.length < 10) {
-      errBox.textContent = '⚠ IAM Account ID must be at least 10 digits.';
-      errBox.classList.add('show');
-      return;
-    }
-
-    errBox.classList.remove('show');
-    btn.classList.add('loading');
-
-    // Store credentials in sessionStorage for the dashboard page
-    sessionStorage.setItem('iam_id',       id);
-    sessionStorage.setItem('iam_username', username);
-    sessionStorage.setItem('iam_auth',     'true');
-
-    // Simulate auth handshake delay then redirect to dashboard
-    setTimeout(() => {
-      window.location.href = '/dashboard.html';
-    }, 1500);
+  // ── TAB SWITCHER
+  function switchTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.auth-panel').forEach(function(p){ p.classList.remove('active'); });
+    var tabs   = document.querySelectorAll('.auth-tab');
+    var panels = document.querySelectorAll('.auth-panel');
+    if (tab === 'cognito') { tabs[0].classList.add('active'); panels[0].classList.add('active'); }
+    else                   { tabs[1].classList.add('active'); panels[1].classList.add('active'); }
+    clearMsg();
   }
 
-  // Allow Enter key to submit
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') doLogin();
+  // ── TOGGLE PASSWORD VISIBILITY
+  function togglePw(inputId, btn) {
+    var el = document.getElementById(inputId);
+    if (el.type === 'password') { el.type = 'text';     btn.textContent = '🙈'; }
+    else                        { el.type = 'password'; btn.textContent = '👁';  }
+  }
+
+  // ── MESSAGE HELPERS
+  function showMsg(text, type) {
+    var box = document.getElementById('msgBox');
+    box.textContent = text;
+    box.className   = 'msg-box ' + type + ' show';
+  }
+  function clearMsg() {
+    var box = document.getElementById('msgBox');
+    box.className = 'msg-box';
+  }
+  function setLoading(btnId, on) {
+    var btn = document.getElementById(btnId);
+    if (on) btn.classList.add('loading');
+    else    btn.classList.remove('loading');
+    btn.disabled = on;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  ✅ TAB 1 — COGNITO LOGIN (Real AWS Authentication)
+  // ═══════════════════════════════════════════════════════════════
+  function doCognitoLogin() {
+    var accountId = document.getElementById('cognitoAccountId').value.trim();
+    var username  = document.getElementById('cognitoUsername').value.trim();
+    var password  = document.getElementById('cognitoPassword').value.trim();
+
+    // Validation
+    if (!accountId || !username || !password) {
+      showMsg('⚠ All fields are required.', 'error'); return;
+    }
+    if (accountId.length < 10 || accountId.length > 12) {
+      showMsg('⚠ AWS Account ID must be 10-12 digits.', 'error'); return;
+    }
+    if (COGNITO_CONFIG.UserPoolId === 'YOUR_USER_POOL_ID') {
+      showMsg('⚠ Cognito not configured yet. Set UserPoolId and ClientId in this file.', 'warn'); return;
+    }
+
+    clearMsg();
+    setLoading('cognitoBtn', true);
+
+    // ✅ REAL AWS Cognito authentication
+    var userPool = new AmazonCognitoIdentity.CognitoUserPool(COGNITO_CONFIG);
+    var cognitoUser = new AmazonCognitoIdentity.CognitoUser({
+      Username : username,
+      Pool     : userPool
+    });
+    var authDetails = new AmazonCognitoIdentity.AuthenticationDetails({
+      Username : username,
+      Password : password
+    });
+
+    cognitoUser.authenticateUser(authDetails, {
+
+      // ✅ SUCCESS — user is real and authenticated
+      onSuccess: function(result) {
+        var idToken      = result.getIdToken().getJwtToken();
+        var accessToken  = result.getAccessToken().getJwtToken();
+        var payload      = parseJwt(idToken);
+
+        sessionStorage.setItem('iam_auth',        'true');
+        sessionStorage.setItem('iam_username',    payload['cognito:username'] || username);
+        sessionStorage.setItem('iam_id',          accountId);
+        sessionStorage.setItem('iam_email',       payload.email || '');
+        sessionStorage.setItem('jwt_token',       idToken);
+        sessionStorage.setItem('access_token',    accessToken);
+        sessionStorage.setItem('token_expiry',    payload.exp);
+        sessionStorage.setItem('auth_method',     'cognito');
+
+        showMsg('✅ Authentication successful! Redirecting...', 'success');
+        setTimeout(function(){ window.location.href = '/dashboard.html'; }, 1000);
+      },
+
+      // ✅ FAILURE — wrong credentials or user doesn't exist in Cognito
+      onFailure: function(err) {
+        setLoading('cognitoBtn', false);
+        var msg = err.message || 'Authentication failed';
+        if (err.code === 'UserNotFoundException')      msg = '⚠ User not found in AWS Cognito.';
+        if (err.code === 'NotAuthorizedException')     msg = '⚠ Incorrect username or password.';
+        if (err.code === 'UserNotConfirmedException')  msg = '⚠ Account not confirmed. Check your email.';
+        if (err.code === 'PasswordResetRequiredException') msg = '⚠ Password reset required via AWS Console.';
+        showMsg(msg, 'error');
+      },
+
+      // ✅ FIRST LOGIN — AWS forces password change
+      newPasswordRequired: function(userAttributes, requiredAttributes) {
+        setLoading('cognitoBtn', false);
+        pendingCognitoUser    = cognitoUser;
+        pendingUserAttributes = userAttributes;
+        document.getElementById('newPwPanel').classList.add('show');
+        showMsg('⚡ First login: you must set a new password below.', 'warn');
+        document.getElementById('cognitoBtn').querySelector('.btn-text').textContent = '✅ Set New Password & Sign In';
+        // Swap the click handler
+        document.getElementById('cognitoBtn').onclick = submitNewPassword;
+      },
+
+      // MFA challenge (if enabled)
+      totpRequired: function(secretCode) {
+        setLoading('cognitoBtn', false);
+        var code = prompt('Enter your MFA / TOTP code:');
+        if (code) cognitoUser.sendMFACode(code, this, 'SOFTWARE_TOKEN_MFA');
+      }
+    });
+  }
+
+  // Handle new password submission (first-time login)
+  function submitNewPassword() {
+    var newPw = document.getElementById('newPassword').value.trim();
+    if (!newPw || newPw.length < 8) {
+      showMsg('⚠ Password must be at least 8 characters.', 'error'); return;
+    }
+    setLoading('cognitoBtn', true);
+    delete pendingUserAttributes.email_verified;
+    delete pendingUserAttributes.phone_number_verified;
+
+    pendingCognitoUser.completeNewPasswordChallenge(newPw, pendingUserAttributes, {
+      onSuccess: function(result) {
+        sessionStorage.setItem('iam_auth',     'true');
+        sessionStorage.setItem('iam_username', document.getElementById('cognitoUsername').value.trim());
+        sessionStorage.setItem('iam_id',       document.getElementById('cognitoAccountId').value.trim());
+        sessionStorage.setItem('jwt_token',    result.getIdToken().getJwtToken());
+        sessionStorage.setItem('auth_method',  'cognito');
+        showMsg('✅ Password set! Redirecting...', 'success');
+        setTimeout(function(){ window.location.href = '/dashboard.html'; }, 1000);
+      },
+      onFailure: function(err) {
+        setLoading('cognitoBtn', false);
+        showMsg('⚠ ' + (err.message || 'Failed to set new password.'), 'error');
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  ✅ TAB 2 — IAM ACCESS KEY (calls your Spring Boot /api/verify)
+  //  Your SimbuController.java must expose POST /api/verify
+  //  (see SimbuController.java provided below)
+  // ═══════════════════════════════════════════════════════════════
+  function doIAMLogin() {
+    var accountId  = document.getElementById('iamAccountId').value.trim();
+    var username   = document.getElementById('iamUsername').value.trim();
+    var accessKey  = document.getElementById('iamAccessKey').value.trim();
+    var secretKey  = document.getElementById('iamSecretKey').value.trim();
+
+    if (!accountId || !username || !accessKey || !secretKey) {
+      showMsg('⚠ All fields are required.', 'error'); return;
+    }
+    if (!accessKey.startsWith('AKIA') && !accessKey.startsWith('ASIA')) {
+      showMsg('⚠ Access Key ID should start with AKIA or ASIA.', 'error'); return;
+    }
+
+    clearMsg();
+    setLoading('iamBtn', true);
+
+    // ✅ Call Spring Boot backend → it calls AWS STS to verify
+    fetch('/api/verify', {
+      method  : 'POST',
+      headers : { 'Content-Type': 'application/json' },
+      body    : JSON.stringify({
+        accountId : accountId,
+        username  : username,
+        accessKey : accessKey,
+        secretKey : secretKey
+      })
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(data) {
+      setLoading('iamBtn', false);
+      if (data.status === 'ok') {
+        sessionStorage.setItem('iam_auth',     'true');
+        sessionStorage.setItem('iam_username', data.username || username);
+        sessionStorage.setItem('iam_id',       data.accountId || accountId);
+        sessionStorage.setItem('iam_arn',      data.arn || '');
+        sessionStorage.setItem('auth_method',  'iam_keys');
+        showMsg('✅ AWS STS verified! Redirecting...', 'success');
+        setTimeout(function(){ window.location.href = '/dashboard.html'; }, 1000);
+      } else {
+        showMsg('⚠ ' + (data.message || 'AWS verification failed.'), 'error');
+      }
+    })
+    .catch(function(err) {
+      setLoading('iamBtn', false);
+      showMsg('⚠ Could not reach backend. Is Spring Boot running?', 'error');
+    });
+  }
+
+  // ── JWT Decode helper (no library needed)
+  function parseJwt(token) {
+    try {
+      var base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(base64));
+    } catch(e) { return {}; }
+  }
+
+  // ── Enter key support
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    var activePanel = document.querySelector('.auth-panel.active');
+    if (activePanel.id === 'panel-cognito') doCognitoLogin();
+    else doIAMLogin();
   });
 </script>
 </body>

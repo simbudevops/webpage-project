@@ -16,10 +16,16 @@
     .topbar-left{display:flex;align-items:center;gap:16px}
     .topbar-right{display:flex;align-items:center;gap:12px}
     .user-chip{display:flex;align-items:center;gap:6px;background:rgba(255,45,120,.08);border:1px solid rgba(255,45,120,.2);border-radius:20px;padding:5px 14px;font-size:.78rem;color:#ff2d78}
+    .auth-method-badge{font-size:.65rem;padding:3px 10px;border-radius:20px;border:1px solid rgba(0,255,136,.25);background:rgba(0,255,136,.07);color:#00ff88;letter-spacing:.1em}
     .btn-simbu{font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.1em;padding:9px 18px;border:2px solid #00d4ff;border-radius:4px;background:transparent;color:#00d4ff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all .25s}
     .btn-simbu:hover{box-shadow:0 0 20px rgba(0,212,255,.4);transform:translateY(-2px)}
     .btn-logout{font-family:'Orbitron',sans-serif;font-size:.68rem;padding:8px 14px;border:1px solid rgba(255,45,120,.35);border-radius:4px;background:transparent;color:rgba(255,45,120,.7);cursor:pointer;transition:all .25s}
     .btn-logout:hover{border-color:#ff2d78;color:#ff2d78}
+
+    /* Session timeout bar */
+    .session-bar{position:relative;z-index:9;background:rgba(255,153,0,.06);border-bottom:1px solid rgba(255,153,0,.12);padding:6px 32px;display:flex;align-items:center;justify-content:space-between;font-size:.7rem;color:rgba(255,153,0,.6);letter-spacing:.08em}
+    .session-timer{color:#ff9900;font-weight:bold}
+    .session-bar .token-expiry{font-size:.65rem;opacity:.5}
 
     .page-wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:36px 24px 60px}
 
@@ -43,11 +49,12 @@
     .info-row{display:flex;align-items:center;padding:14px 22px;border-bottom:1px solid #1e3a5f;gap:20px}
     .info-row:last-child{border-bottom:none}
     .info-row:hover{background:rgba(255,45,120,.03)}
-    .info-key{font-size:.72rem;color:rgba(200,216,232,.45);letter-spacing:.15em;text-transform:uppercase;min-width:180px;flex-shrink:0}
+    .info-key{font-size:.72rem;color:rgba(200,216,232,.45);letter-spacing:.15em;text-transform:uppercase;min-width:200px;flex-shrink:0}
     .info-val{font-size:.88rem;color:#c8d8e8;word-break:break-all}
     .info-val code{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);border-radius:3px;padding:2px 8px;color:#00d4ff;font-family:'Share Tech Mono',monospace;font-size:.85em}
     .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#00ff88;box-shadow:0 0 8px #00ff88;margin-right:8px;animation:blink 2s ease-in-out infinite}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+    .verified-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);border-radius:20px;padding:2px 10px;font-size:.7rem;color:#00ff88}
 
     .policies-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:32px}
     .policy-card{background:#0f1629;border:1px solid #1e3a5f;border-radius:8px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;transition:border-color .2s}
@@ -62,15 +69,32 @@
     .btn-goto{font-family:'Orbitron',sans-serif;font-size:.78rem;font-weight:700;letter-spacing:.13em;padding:13px 28px;border:2px solid #00d4ff;border-radius:6px;background:rgba(0,212,255,.1);color:#00d4ff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .25s}
     .btn-goto:hover{background:rgba(0,212,255,.18);box-shadow:0 0 28px rgba(0,212,255,.35);transform:translateY(-2px)}
 
+    /* Token expired overlay */
+    .expired-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(10,14,26,.95);align-items:center;justify-content:center;flex-direction:column;gap:20px;text-align:center}
+    .expired-overlay.show{display:flex}
+    .expired-overlay h2{font-family:'Orbitron',sans-serif;color:#ff2d78;font-size:1.4rem;letter-spacing:.1em}
+    .expired-overlay p{color:rgba(200,216,232,.5);font-size:.85rem}
+    .btn-relogin{font-family:'Orbitron',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.15em;padding:13px 28px;border:2px solid #ff2d78;border-radius:6px;background:rgba(255,45,120,.1);color:#ff2d78;cursor:pointer;transition:all .25s;text-decoration:none}
+    .btn-relogin:hover{box-shadow:0 0 24px rgba(255,45,120,.4)}
+
     footer{position:relative;z-index:1;text-align:center;padding:28px;font-size:.7rem;color:rgba(200,216,232,.2);letter-spacing:.12em}
   </style>
 </head>
 <body>
 
+<!-- ✅ Token expired overlay -->
+<div class="expired-overlay" id="expiredOverlay">
+  <div>🔒</div>
+  <h2>SESSION EXPIRED</h2>
+  <p>Your AWS session token has expired. Please sign in again.</p>
+  <a href="/raegan.html" class="btn-relogin">⚡ Sign In Again</a>
+</div>
+
 <div class="topbar">
   <div class="topbar-left">
     <div class="logo-small">RAEGAN</div>
     <div class="aws-badge">&#9729; AWS IAM Console</div>
+    <div class="auth-method-badge" id="authMethodBadge">COGNITO</div>
   </div>
   <div class="topbar-right">
     <div class="user-chip">&#128100; <span id="navUser">user</span></div>
@@ -79,12 +103,18 @@
   </div>
 </div>
 
+<!-- Session timer bar -->
+<div class="session-bar">
+  <div>&#128274; Session active &nbsp;|&nbsp; Auth: <span id="authMethodLabel">AWS Cognito</span></div>
+  <div>Session expires: <span class="session-timer" id="sessionTimer">—</span> &nbsp;|&nbsp; <span class="token-expiry" id="tokenExpiry"></span></div>
+</div>
+
 <div class="page-wrap">
 
   <div class="welcome-banner">
     <div>
       <h1>Welcome back, <span id="welcomeName">&#8212;</span> &#10022;</h1>
-      <p>You are signed into the AWS IAM Management Console &nbsp;|&nbsp; Session active</p>
+      <p>You are signed into the AWS IAM Management Console &nbsp;|&nbsp; <span id="verifyStatus">Verifying session...</span></p>
     </div>
     <div>
       <div class="acc-label">Account ID</div>
@@ -93,8 +123,8 @@
   </div>
 
   <div class="status-grid">
-    <div class="status-card"><div class="s-icon">&#9989;</div><div class="s-label">Auth Status</div><div class="s-value c-green">ACTIVE</div></div>
-    <div class="status-card"><div class="s-icon">&#128272;</div><div class="s-label">MFA</div><div class="s-value c-aws">ENABLED</div></div>
+    <div class="status-card"><div class="s-icon">&#9989;</div><div class="s-label">Auth Status</div><div class="s-value c-green" id="authStatus">ACTIVE</div></div>
+    <div class="status-card"><div class="s-icon">&#128272;</div><div class="s-label">Auth Method</div><div class="s-value c-aws" id="authMethodCard">—</div></div>
     <div class="status-card"><div class="s-icon">&#128203;</div><div class="s-label">Policies</div><div class="s-value c-blue">4</div></div>
     <div class="status-card"><div class="s-icon">&#127758;</div><div class="s-label">Region</div><div class="s-value c-purple">ap-south-1</div></div>
   </div>
@@ -103,10 +133,17 @@
   <div class="info-table">
     <div class="info-row"><div class="info-key">Account ID</div><div class="info-val"><code id="detailId">&#8212;</code></div></div>
     <div class="info-row"><div class="info-key">IAM Username</div><div class="info-val" id="detailUser">&#8212;</div></div>
+    <div class="info-row"><div class="info-key">Email</div><div class="info-val" id="detailEmail">&#8212;</div></div>
     <div class="info-row"><div class="info-key">ARN</div><div class="info-val"><code id="detailArn">&#8212;</code></div></div>
+    <div class="info-row">
+      <div class="info-key">Authentication</div>
+      <div class="info-val">
+        <span class="verified-badge" id="authVerifiedBadge">✅ AWS Verified</span>
+      </div>
+    </div>
     <div class="info-row"><div class="info-key">Console Access</div><div class="info-val"><span class="dot"></span>Enabled</div></div>
     <div class="info-row"><div class="info-key">Login Time</div><div class="info-val" id="loginTime">&#8212;</div></div>
-    <div class="info-row"><div class="info-key">Access Keys</div><div class="info-val c-aws">Programmatic Access &#8212; Active</div></div>
+    <div class="info-row"><div class="info-key">Token Expiry</div><div class="info-val" id="tokenExpiryDetail">&#8212;</div></div>
   </div>
 
   <div class="section-title">&#128203; Attached IAM Policies</div>
@@ -127,26 +164,118 @@
 
 </div>
 
-<footer>RAEGAN AWS IAM Dashboard &nbsp;|&nbsp; AWS Identity &amp; Access Management</footer>
+<footer>RAEGAN AWS IAM Dashboard &nbsp;|&nbsp; AWS Identity &amp; Access Management &nbsp;|&nbsp; Real Auth</footer>
 
 <script>
-  // Auth guard — bounce back to login if not authenticated
-  if (sessionStorage.getItem('iam_auth') !== 'true') {
+  // ═══════════════════════════════════════════════════════════════
+  //  ✅ AUTH GUARD — validates real session, not just a flag
+  // ═══════════════════════════════════════════════════════════════
+  function parseJwt(token) {
+    try {
+      var base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+      return JSON.parse(atob(base64));
+    } catch(e) { return null; }
+  }
+
+  function isSessionValid() {
+    var auth   = sessionStorage.getItem('iam_auth');
+    var method = sessionStorage.getItem('auth_method');
+
+    if (auth !== 'true') return false;
+
+    // For Cognito: validate JWT expiry
+    if (method === 'cognito') {
+      var token  = sessionStorage.getItem('jwt_token');
+      if (!token) return false;
+      var payload = parseJwt(token);
+      if (!payload) return false;
+      // Check expiry (exp is Unix timestamp in seconds)
+      var now = Math.floor(Date.now() / 1000);
+      if (payload.exp && payload.exp < now) {
+        sessionStorage.clear();
+        return false;
+      }
+      return true;
+    }
+
+    // For IAM keys: check iam_auth flag + username
+    if (method === 'iam_keys') {
+      return !!sessionStorage.getItem('iam_username');
+    }
+
+    return false;
+  }
+
+  // Run guard immediately
+  if (!isSessionValid()) {
     window.location.href = '/raegan.html';
   }
 
-  var username = sessionStorage.getItem('iam_username') || 'user';
-  var id       = sessionStorage.getItem('iam_id')       || '—';
-  var now      = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  // ── Populate dashboard with session data
+  var username   = sessionStorage.getItem('iam_username') || 'user';
+  var accountId  = sessionStorage.getItem('iam_id')       || '—';
+  var email      = sessionStorage.getItem('iam_email')    || '—';
+  var arn        = sessionStorage.getItem('iam_arn')      || ('arn:aws:iam::' + accountId + ':user/' + username);
+  var method     = sessionStorage.getItem('auth_method')  || 'cognito';
+  var now        = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
 
-  document.getElementById('navUser').textContent      = username;
-  document.getElementById('welcomeName').textContent  = username;
-  document.getElementById('accId').textContent        = id;
-  document.getElementById('detailId').textContent     = id;
-  document.getElementById('detailUser').textContent   = username;
-  document.getElementById('detailArn').textContent    = 'arn:aws:iam::' + id + ':user/' + username;
-  document.getElementById('loginTime').textContent    = now + ' IST';
+  document.getElementById('navUser').textContent       = username;
+  document.getElementById('welcomeName').textContent   = username;
+  document.getElementById('accId').textContent         = accountId;
+  document.getElementById('detailId').textContent      = accountId;
+  document.getElementById('detailUser').textContent    = username;
+  document.getElementById('detailEmail').textContent   = email;
+  document.getElementById('detailArn').textContent     = arn;
+  document.getElementById('loginTime').textContent     = now + ' IST';
 
+  // Auth method display
+  var methodLabels = {
+    'cognito'  : 'COGNITO',
+    'iam_keys' : 'IAM KEYS'
+  };
+  var methodFull = {
+    'cognito'  : 'AWS Cognito (JWT verified)',
+    'iam_keys' : 'IAM Access Keys (STS verified)'
+  };
+  var label = methodLabels[method] || method.toUpperCase();
+  document.getElementById('authMethodBadge').textContent  = '✅ ' + label;
+  document.getElementById('authMethodCard').textContent   = label;
+  document.getElementById('authMethodLabel').textContent  = methodFull[method] || label;
+
+  // Token expiry display
+  var expiry = sessionStorage.getItem('token_expiry');
+  if (expiry) {
+    var expiryDate = new Date(parseInt(expiry) * 1000);
+    document.getElementById('tokenExpiryDetail').textContent = expiryDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
+  } else {
+    document.getElementById('tokenExpiryDetail').textContent = method === 'iam_keys' ? 'STS Session (temporary)' : '—';
+  }
+
+  document.getElementById('verifyStatus').textContent = '✅ Session verified via ' + (methodFull[method] || label);
+
+  // ── Session countdown timer
+  function updateTimer() {
+    var exp = sessionStorage.getItem('token_expiry');
+    var timerEl = document.getElementById('sessionTimer');
+    if (!exp) { timerEl.textContent = 'Active'; return; }
+
+    var remaining = parseInt(exp) - Math.floor(Date.now() / 1000);
+    if (remaining <= 0) {
+      document.getElementById('expiredOverlay').classList.add('show');
+      return;
+    }
+    var h = Math.floor(remaining / 3600);
+    var m = Math.floor((remaining % 3600) / 60);
+    var s = remaining % 60;
+    timerEl.textContent = (h ? h + 'h ' : '') + m + 'm ' + s + 's';
+
+    // Warn when < 5 minutes
+    if (remaining < 300) timerEl.style.color = '#ff2d78';
+  }
+  updateTimer();
+  setInterval(updateTimer, 1000);
+
+  // ── Logout
   function logout() {
     sessionStorage.clear();
     window.location.href = '/raegan.html';
