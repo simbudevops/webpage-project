@@ -4,12 +4,12 @@ pipeline {
     environment {
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
         DOCKERHUB_USERNAME = "simbudevops7497"
-        IMAGE_NAME         = "raegan-app"
+        IMAGE_NAME         = "raegan-app-iam"
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
         NAMESPACE          = "default"
-        DEPLOYMENT_NAME    = "raegan-app"
+        DEPLOYMENT_NAME    = "raegan-app-iam"
         IMAGE_TAG          = "v2"
     }
 
