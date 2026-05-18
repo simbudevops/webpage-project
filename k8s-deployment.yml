@@ -2,23 +2,23 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: raegan-app
+  name: raegan-app-iam
 
 spec:
   replicas: 2
 
   selector:
     matchLabels:
-      app: raegan-app
+      app: raegan-app-iam
 
   template:
     metadata:
       labels:
-        app: raegan-app
+        app: raegan-app-iam
 
     spec:
       containers:
-        - name: raegan-app
+        - name: raegan-app-iam
 
           image: IMAGE_PLACEHOLDER
 
