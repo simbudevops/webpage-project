@@ -4,12 +4,12 @@ pipeline {
     environment {
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
         DOCKERHUB_USERNAME = "simbudevops7497"
-        IMAGE_NAME         = "raegan-app-iam"
+        IMAGE_NAME         = "raegan-app"
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
         NAMESPACE          = "default"
-        DEPLOYMENT_NAME    = "raegan-app-iam"
+        DEPLOYMENT_NAME    = "raegan-app-iam"    // FIX #1: was "raegan-app", must match k8s-deployment.yml
         IMAGE_TAG          = "v2"
     }
 
@@ -84,20 +84,21 @@ pipeline {
         }
 
         // ─────────────────────────────────────────────────────────────────
-        // STAGE 2: Checkout dev branch
+        // STAGE 2: Checkout feature-iam branch
+        // FIX #2: was checking out 'dev' branch - must checkout 'feature-iam'
+        //         so the correct k8s-deployment.yml (with raegan-app-iam) is used
         // ─────────────────────────────────────────────────────────────────
         stage('Checkout Code') {
             steps {
                 script {
-                    echo "=== Checking out branch: dev ==="
+                    echo "=== Checking out branch: feature-iam ==="
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: '*/dev']],
+                        branches: [[name: '*/feature-iam']],
                         userRemoteConfigs: [[url: "${GIT_REPO}"]]
                     ])
-                    env.CURRENT_BRANCH = 'dev'
+                    env.CURRENT_BRANCH = 'feature-iam'
 
-                    // Verify all required files exist
                     sh '''
                         echo "=== Workspace Contents ==="
                         ls -la
@@ -114,7 +115,7 @@ pipeline {
                         done
                         if [ "$MISSING" = "1" ]; then
                             echo ""
-                            echo "ERROR: Missing required file(s). Add them to the dev branch and re-run."
+                            echo "ERROR: Missing required file(s)."
                             exit 1
                         fi
 
@@ -128,8 +129,6 @@ pipeline {
                             echo "  [OK] IMAGE_PLACEHOLDER found - sed will work correctly"
                         else
                             echo "  [ERROR] IMAGE_PLACEHOLDER NOT found in k8s-deployment.yml"
-                            echo "  Fix: change the image line in k8s-deployment.yml to:"
-                            echo "         image: IMAGE_PLACEHOLDER"
                             exit 1
                         fi
                     '''
@@ -202,7 +201,7 @@ pipeline {
                     echo "=== Built Artifacts ==="
                     ls -lh target/*.jar 2>/dev/null || \
                     ls -lh target/*.war 2>/dev/null || \
-                    echo "WARNING: No jar/war found in target/ - check pom.xml packaging"
+                    echo "WARNING: No jar/war found in target/"
                 '''
             }
         }
@@ -303,7 +302,6 @@ pipeline {
                     kubectl get nodes
                     if [ $? -ne 0 ]; then
                         echo "ERROR: Cannot reach Kubernetes cluster."
-                        echo "Check /var/lib/jenkins/.kube/config is correct."
                         exit 1
                     fi
 
@@ -315,7 +313,7 @@ pipeline {
                         fi
                     done
 
-                    # ── Step 4: Copy template → temp file (never edit original) ──
+                    # ── Step 4: Copy template → temp file ─────────────────
                     cp k8s-deployment.yml ${DEPLOY_FILE}
 
                     # ── Step 5: Replace IMAGE_PLACEHOLDER with v2 image ───
@@ -327,8 +325,6 @@ pipeline {
 
                     if grep -q "IMAGE_PLACEHOLDER" ${DEPLOY_FILE}; then
                         echo "ERROR: IMAGE_PLACEHOLDER still present - sed failed."
-                        echo "k8s-deployment.yml must have:  image: IMAGE_PLACEHOLDER"
-                        cat ${DEPLOY_FILE}
                         exit 1
                     fi
 
@@ -340,6 +336,7 @@ pipeline {
                     kubectl apply -f k8s-service.yml -n ${NAMESPACE} --validate=false
 
                     # ── Step 8: Wait for rollout (180s timeout) ───────────
+                    # FIX #3: rollout status now uses DEPLOYMENT_NAME=raegan-app-iam
                     echo "=== Waiting for rollout to complete ==="
                     kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE} --timeout=180s
 
@@ -348,19 +345,13 @@ pipeline {
                         echo "======================================"
                         echo "  ROLLOUT FAILED - Debug Info Below"
                         echo "======================================"
-                        echo "--- All Pods ---"
                         kubectl get pods -n ${NAMESPACE} -l app=${DEPLOYMENT_NAME} -o wide
-                        echo ""
                         FIRST_POD=$(kubectl get pods -n ${NAMESPACE} -l app=${DEPLOYMENT_NAME} \
                             -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
                         if [ -n "$FIRST_POD" ]; then
-                            echo "--- Pod Describe: $FIRST_POD ---"
                             kubectl describe pod $FIRST_POD -n ${NAMESPACE}
-                            echo ""
-                            echo "--- Pod Logs (last 50 lines) ---"
                             kubectl logs $FIRST_POD -n ${NAMESPACE} --tail=50 || true
                         fi
-                        echo "--- Deployment Describe ---"
                         kubectl describe deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}
                         exit 1
                     fi
@@ -374,7 +365,7 @@ pipeline {
                     kubectl get pods -n ${NAMESPACE} -l app=${DEPLOYMENT_NAME} -o wide
                     echo ""
                     echo "--- Service ---"
-                    kubectl get svc raegan-service -n ${NAMESPACE}
+                    kubectl get svc raegan-service-iam -n ${NAMESPACE}
                     echo ""
                     echo "--- Deployment ---"
                     kubectl get deployment ${DEPLOYMENT_NAME} -n ${NAMESPACE}
