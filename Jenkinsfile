@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     environment {
         GIT_REPO           = "https://github.com/simbudevops/webpage-project.git"
         DOCKERHUB_USERNAME = "simbudevops7497"
@@ -7,31 +8,45 @@ pipeline {
         DOCKERHUB_CREDS    = "dockerhub-creds"
         SONAR_SERVER       = "SonarQube"
         JAVA_HOME          = "/usr/lib/jvm/java-17-openjdk-amd64"
+        NAMESPACE          = "default"
+        DEPLOYMENT_NAME    = "raegan-app"
+        IMAGE_TAG          = "v2"
     }
+
     stages {
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 1: Install Required Tools
+        // ─────────────────────────────────────────────────────────────────
         stage('Install Required Tools') {
             steps {
                 sh '''
                     echo "=== Installing Required Tools ==="
+
                     sudo apt-get update -y
+
+                    # ── Java 17 ───────────────────────────────────────────
                     sudo apt-get install -y openjdk-17-jdk
-                    sudo update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-17-openjdk-amd64/bin/java 2
+                    sudo update-alternatives --install /usr/bin/java  java  /usr/lib/jvm/java-17-openjdk-amd64/bin/java  2
                     sudo update-alternatives --install /usr/bin/javac javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac 2
-                    sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+                    sudo update-alternatives --set java  /usr/lib/jvm/java-17-openjdk-amd64/bin/java
                     sudo update-alternatives --set javac /usr/lib/jvm/java-17-openjdk-amd64/bin/javac
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
                     java -version
-                    if ! mvn -version 2>/dev/null; then
+
+                    # ── Maven ─────────────────────────────────────────────
+                    if ! command -v mvn &>/dev/null; then
                         sudo apt-get install -y maven
                     else
                         echo "Maven already installed"
                     fi
-                    sudo ln -sf /usr/share/maven/bin/mvn /usr/local/bin/mvn
-                    sudo ln -sf /usr/share/maven/bin/mvn /usr/bin/mvn
+                    sudo ln -sf /usr/share/maven/bin/mvn /usr/local/bin/mvn || true
+                    sudo ln -sf /usr/share/maven/bin/mvn /usr/bin/mvn        || true
                     mvn -version
-                    if ! docker --version 2>/dev/null; then
+
+                    # ── Docker ────────────────────────────────────────────
+                    if ! command -v docker &>/dev/null; then
                         sudo apt-get install -y docker.io
                         sudo systemctl start docker
                         sudo systemctl enable docker
@@ -40,93 +55,161 @@ pipeline {
                     fi
                     sudo chmod 666 /var/run/docker.sock
                     docker --version
-                    if ! kubectl version --client 2>/dev/null; then
+
+                    # ── kubectl ───────────────────────────────────────────
+                    if ! command -v kubectl &>/dev/null; then
                         sudo snap install kubectl --classic
                     else
                         echo "kubectl already installed"
                     fi
                     kubectl version --client
-                    if docker ps | grep -q sonarqube; then
+
+                    # ── SonarQube container ───────────────────────────────
+                    if docker ps --filter "name=sonarqube" --filter "status=running" | grep -q sonarqube; then
                         echo "SonarQube already running"
+                    elif docker ps -a --filter "name=sonarqube" | grep -q sonarqube; then
+                        echo "Restarting stopped SonarQube container..."
+                        docker start sonarqube
+                        sleep 30
                     else
+                        echo "Starting fresh SonarQube container..."
                         docker run -d --name sonarqube -p 9000:9000 sonarqube:lts-community
+                        echo "Waiting 60s for SonarQube to be ready..."
                         sleep 60
                     fi
+
                     echo "=== All Tools Ready ==="
                 '''
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 2: Checkout dev branch
+        // ─────────────────────────────────────────────────────────────────
         stage('Checkout Code') {
             steps {
                 script {
-                    echo '=== Pulling code from GitHub ==='
-                    def branch = env.BRANCH_NAME?.trim() ?: 'dev'
-                    env.CURRENT_BRANCH = branch
-                    echo "=== Checking out branch: ${branch} ==="
-                    git branch: "${branch}", url: "${GIT_REPO}"
+                    echo "=== Checking out branch: dev ==="
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/dev']],
+                        userRemoteConfigs: [[url: "${GIT_REPO}"]]
+                    ])
+                    env.CURRENT_BRANCH = 'dev'
+
+                    // Verify all required files exist
+                    sh '''
+                        echo "=== Workspace Contents ==="
+                        ls -la
+                        echo ""
+                        echo "=== Required File Check ==="
+                        MISSING=0
+                        for f in Dockerfile k8s-deployment.yml k8s-service.yml pom.xml; do
+                            if [ -f "$f" ]; then
+                                echo "  [OK]      $f"
+                            else
+                                echo "  [MISSING] $f  <-- pipeline will fail without this"
+                                MISSING=1
+                            fi
+                        done
+                        if [ "$MISSING" = "1" ]; then
+                            echo ""
+                            echo "ERROR: Missing required file(s). Add them to the dev branch and re-run."
+                            exit 1
+                        fi
+
+                        echo ""
+                        echo "=== k8s-deployment.yml preview ==="
+                        cat k8s-deployment.yml
+                        echo ""
+
+                        echo "=== IMAGE_PLACEHOLDER check ==="
+                        if grep -q "IMAGE_PLACEHOLDER" k8s-deployment.yml; then
+                            echo "  [OK] IMAGE_PLACEHOLDER found - sed will work correctly"
+                        else
+                            echo "  [ERROR] IMAGE_PLACEHOLDER NOT found in k8s-deployment.yml"
+                            echo "  Fix: change the image line in k8s-deployment.yml to:"
+                            echo "         image: IMAGE_PLACEHOLDER"
+                            exit 1
+                        fi
+                    '''
                 }
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 3: Set image tag to v2
+        // ─────────────────────────────────────────────────────────────────
         stage('Assign Image Tag') {
             steps {
                 script {
-                    def branch = env.CURRENT_BRANCH
+                    env.FULL_IMAGE  = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    env.DEPLOY_FILE = "k8s-deploy-${IMAGE_TAG}.yml"
 
-                    if (branch == 'master') {
-                        env.IMAGE_TAG = 'latest'
-                    } else if (branch == 'dev') {
-                        env.IMAGE_TAG = 'v1'
-                    } else {
-                        // ✅ FIX: any other branch gets its own unique tag
-                        // e.g. branch "feature-login" → tag "feature-login"
-                        env.IMAGE_TAG = branch.replaceAll('/', '-')
-                    }
-
-                    env.FULL_IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${env.IMAGE_TAG}"
-
-                    // ✅ FIX: unique deployment file per branch — no more cross-branch collisions
-                    env.DEPLOY_FILE = "k8s-deploy-${env.IMAGE_TAG}.yml"
-
-                    echo "=== Branch: ${branch} → Image Tag: ${env.IMAGE_TAG} ==="
-                    echo "=== Full Image: ${env.FULL_IMAGE} ==="
-                    echo "=== Deploy File: ${env.DEPLOY_FILE} ==="
+                    echo "======================================"
+                    echo "  Branch:      ${env.CURRENT_BRANCH}"
+                    echo "  Image Tag:   ${IMAGE_TAG}"
+                    echo "  Full Image:  ${env.FULL_IMAGE}"
+                    echo "  Deploy File: ${env.DEPLOY_FILE}"
+                    echo "======================================"
                 }
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 4: Maven Compile
+        // ─────────────────────────────────────────────────────────────────
         stage('Maven Compile') {
             steps {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
+                    echo "=== Maven Compile ==="
                     mvn clean compile
                 '''
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 5: Maven Test
+        // ─────────────────────────────────────────────────────────────────
         stage('Maven Test') {
             steps {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
+                    echo "=== Maven Test ==="
                     mvn test
                 '''
             }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                }
+            }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 6: Maven Package
+        // ─────────────────────────────────────────────────────────────────
         stage('Maven Package') {
             steps {
                 sh '''
                     export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                     export PATH=$JAVA_HOME/bin:$PATH
+                    echo "=== Maven Package ==="
                     mvn package -DskipTests
-                    ls -lh target/*.jar
+                    echo "=== Built Artifacts ==="
+                    ls -lh target/*.jar 2>/dev/null || \
+                    ls -lh target/*.war 2>/dev/null || \
+                    echo "WARNING: No jar/war found in target/ - check pom.xml packaging"
                 '''
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 7: SonarQube Scan
+        // ─────────────────────────────────────────────────────────────────
         stage('SonarQube Scan') {
             steps {
                 withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
@@ -134,6 +217,7 @@ pipeline {
                         sh '''
                             export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
                             export PATH=$JAVA_HOME/bin:$PATH
+                            echo "=== SonarQube Scan ==="
                             mvn sonar:sonar \
                                 -Dsonar.projectKey=simbu-app \
                                 -Dsonar.host.url=http://13.235.56.152:9000 \
@@ -144,23 +228,42 @@ pipeline {
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 8: Quality Gate
+        // ─────────────────────────────────────────────────────────────────
         stage('Quality Gate') {
             steps {
-                timeout(time: 5, unit: 'MINUTES') {
+                timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 9: Docker Build
+        // ─────────────────────────────────────────────────────────────────
         stage('Docker Build') {
             steps {
                 sh '''
                     sudo chmod 666 /var/run/docker.sock
+
+                    if [ ! -f "Dockerfile" ]; then
+                        echo "ERROR: Dockerfile not found in workspace root"
+                        exit 1
+                    fi
+
+                    echo "=== Building Docker image: ${FULL_IMAGE} ==="
                     docker build -t ${FULL_IMAGE} .
+
+                    echo "=== Build complete ==="
+                    docker images | grep "${IMAGE_NAME}"
                 '''
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 10: Docker Push (v2)
+        // ─────────────────────────────────────────────────────────────────
         stage('Docker Push') {
             steps {
                 withCredentials([usernamePassword(
@@ -170,69 +273,140 @@ pipeline {
                 )]) {
                     sh """
                         sudo chmod 666 /var/run/docker.sock
+                        echo "=== Pushing: ${env.FULL_IMAGE} ==="
                         echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-                        docker push ${FULL_IMAGE}
+                        docker push ${env.FULL_IMAGE}
                         docker logout
+                        echo "=== Push complete: ${env.FULL_IMAGE} ==="
                     """
                 }
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // STAGE 11: Deploy to Kubernetes
+        // ─────────────────────────────────────────────────────────────────
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
+                    echo "=== Kubernetes Deployment Start ==="
+
+                    # ── Step 1: kubeconfig ────────────────────────────────
                     mkdir -p /var/lib/jenkins/.kube
                     sudo cp /home/ubuntu/.kube/config /var/lib/jenkins/.kube/config
                     sudo chown jenkins:jenkins /var/lib/jenkins/.kube/config
                     sudo chmod 600 /var/lib/jenkins/.kube/config
                     export KUBECONFIG=/var/lib/jenkins/.kube/config
 
+                    # ── Step 2: Verify cluster connectivity ───────────────
+                    echo "=== Cluster Nodes ==="
                     kubectl get nodes
+                    if [ $? -ne 0 ]; then
+                        echo "ERROR: Cannot reach Kubernetes cluster."
+                        echo "Check /var/lib/jenkins/.kube/config is correct."
+                        exit 1
+                    fi
 
-                    # ✅ FIX 1: Copy the ORIGINAL template to a BRANCH-SPECIFIC temp file
-                    # The original k8s-deployment.yml is NEVER modified
-                    # Every branch/run gets its own file → no conflicts between branches
+                    # ── Step 3: Validate manifest files ───────────────────
+                    for f in k8s-deployment.yml k8s-service.yml; do
+                        if [ ! -f "$f" ]; then
+                            echo "ERROR: $f not found in workspace"
+                            exit 1
+                        fi
+                    done
+
+                    # ── Step 4: Copy template → temp file (never edit original) ──
                     cp k8s-deployment.yml ${DEPLOY_FILE}
 
-                    # ✅ FIX 2: sed runs on the COPY, not the original
-                    # Next run: original still has IMAGE_PLACEHOLDER → sed always works
+                    # ── Step 5: Replace IMAGE_PLACEHOLDER with v2 image ───
                     sed -i "s|IMAGE_PLACEHOLDER|${FULL_IMAGE}|g" ${DEPLOY_FILE}
 
-                    # ✅ FIX 3: verify the replacement actually worked before applying
-                    echo "=== Verifying image in deploy file ==="
+                    # ── Step 6: Confirm replacement succeeded ─────────────
+                    echo "=== Image line after replacement ==="
                     grep "image:" ${DEPLOY_FILE}
 
-                    # Apply using the branch-specific deploy file
-                    kubectl apply -f ${DEPLOY_FILE} --validate=false
-                    kubectl apply -f k8s-service.yml --validate=false
+                    if grep -q "IMAGE_PLACEHOLDER" ${DEPLOY_FILE}; then
+                        echo "ERROR: IMAGE_PLACEHOLDER still present - sed failed."
+                        echo "k8s-deployment.yml must have:  image: IMAGE_PLACEHOLDER"
+                        cat ${DEPLOY_FILE}
+                        exit 1
+                    fi
 
-                    # ✅ FIX 4: deployment name includes branch tag to avoid k8s name conflicts
-                    kubectl rollout status deployment/raegan-app --timeout=120s
+                    # ── Step 7: Apply manifests ───────────────────────────
+                    echo "=== Applying Deployment manifest ==="
+                    kubectl apply -f ${DEPLOY_FILE} -n ${NAMESPACE} --validate=false
 
-                    echo "=== Deployment complete for branch: ${CURRENT_BRANCH} ==="
-                    kubectl get pods -l app=raegan-app
-                    kubectl get svc raegan-service
+                    echo "=== Applying Service manifest ==="
+                    kubectl apply -f k8s-service.yml -n ${NAMESPACE} --validate=false
 
-                    # ✅ FIX 5: clean up the temp deploy file after apply
+                    # ── Step 8: Wait for rollout (180s timeout) ───────────
+                    echo "=== Waiting for rollout to complete ==="
+                    kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE} --timeout=180s
+
+                    ROLLOUT_STATUS=$?
+                    if [ $ROLLOUT_STATUS -ne 0 ]; then
+                        echo "======================================"
+                        echo "  ROLLOUT FAILED - Debug Info Below"
+                        echo "======================================"
+                        echo "--- All Pods ---"
+                        kubectl get pods -n ${NAMESPACE} -l app=${DEPLOYMENT_NAME} -o wide
+                        echo ""
+                        FIRST_POD=$(kubectl get pods -n ${NAMESPACE} -l app=${DEPLOYMENT_NAME} \
+                            -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+                        if [ -n "$FIRST_POD" ]; then
+                            echo "--- Pod Describe: $FIRST_POD ---"
+                            kubectl describe pod $FIRST_POD -n ${NAMESPACE}
+                            echo ""
+                            echo "--- Pod Logs (last 50 lines) ---"
+                            kubectl logs $FIRST_POD -n ${NAMESPACE} --tail=50 || true
+                        fi
+                        echo "--- Deployment Describe ---"
+                        kubectl describe deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}
+                        exit 1
+                    fi
+
+                    # ── Step 9: Final status print ────────────────────────
+                    echo "======================================"
+                    echo "  DEPLOYMENT SUCCESSFUL"
+                    echo "  Image: ${FULL_IMAGE}"
+                    echo "======================================"
+                    echo "--- Pods ---"
+                    kubectl get pods -n ${NAMESPACE} -l app=${DEPLOYMENT_NAME} -o wide
+                    echo ""
+                    echo "--- Service ---"
+                    kubectl get svc raegan-service -n ${NAMESPACE}
+                    echo ""
+                    echo "--- Deployment ---"
+                    kubectl get deployment ${DEPLOYMENT_NAME} -n ${NAMESPACE}
+
+                    # ── Step 10: Cleanup temp file ────────────────────────
                     rm -f ${DEPLOY_FILE}
                 '''
             }
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // POST
+    // ─────────────────────────────────────────────────────────────────────
     post {
         success {
-            echo "PIPELINE SUCCESS! Branch: ${env.CURRENT_BRANCH} | Image: ${env.FULL_IMAGE}"
+            echo "======================================"
+            echo "  PIPELINE SUCCESS"
+            echo "  Branch : ${env.CURRENT_BRANCH}"
+            echo "  Image  : ${env.FULL_IMAGE}"
+            echo "======================================"
         }
         failure {
-            echo "PIPELINE FAILED! Branch: ${env.CURRENT_BRANCH} | Check logs above."
+            echo "======================================"
+            echo "  PIPELINE FAILED"
+            echo "  Branch : ${env.CURRENT_BRANCH}"
+            echo "  Check stage logs above for root cause."
+            echo "======================================"
         }
         always {
-            // ✅ FIX 6: also clean up any leftover temp deploy files before workspace wipe
             sh "rm -f k8s-deploy-*.yml || true"
-            node('') {
-                cleanWs()
-            }
+            cleanWs()
         }
     }
 }
