@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: raegan-app-iam
-          image: IMAGE_PLACEHOLDER        # <-- sed replaces this with simbudevops7497/raegan-app:v2
+          image: IMAGE_PLACEHOLDER
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
