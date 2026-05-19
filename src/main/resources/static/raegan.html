@@ -6,8 +6,7 @@
   <title>RAEGAN - AWS IAM Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
 
-  <!-- ✅ AWS Cognito SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js/dist/amazon-cognito-identity.min.js"></script>
+  <!-- ✅ Cognito SDK removed — pure IAM authentication only -->
 
   <style>
     :root {
@@ -118,20 +117,6 @@
     }
     .card-sub { font-size: 0.72rem; color: rgba(200,216,232,0.45); margin-top: 2px; }
 
-    /* ── CONFIG NOTICE ── */
-    .config-notice {
-      background: rgba(255,153,0,0.1);
-      border: 1px solid rgba(255,153,0,0.35);
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 0.75rem;
-      color: #ff9900;
-      margin-bottom: 20px;
-      letter-spacing: 0.04em;
-      display: none; /* shown only when POOL_ID is placeholder */
-    }
-    .config-notice.show { display: block; }
-
     .field { margin-bottom: 22px; }
     label {
       display: block;
@@ -207,24 +192,6 @@
       background: rgba(0,255,136,0.08);
       border: 1px solid rgba(0,255,136,0.3);
       color: var(--green);
-    }
-
-    /* ── NEW PASSWORD PANEL ── */
-    .new-pw-panel {
-      display: none;
-      background: rgba(0,212,255,0.05);
-      border: 1px solid rgba(0,212,255,0.2);
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-    .new-pw-panel.show { display: block; }
-    .new-pw-panel h4 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.78rem;
-      color: #00d4ff;
-      margin-bottom: 12px;
-      letter-spacing: 0.1em;
     }
 
     .btn-login {
@@ -331,38 +298,34 @@
       </div>
     </div>
 
-    <!-- Config warning shown if Cognito Pool ID not set -->
-    <div class="config-notice show" id="configNotice">
-      ⚙ <strong>SETUP REQUIRED:</strong> Replace <code>YOUR_USER_POOL_ID</code> and <code>YOUR_APP_CLIENT_ID</code> in this file with your real AWS Cognito values.
-    </div>
-
     <!-- Auth method tabs -->
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchTab('cognito')">☁ COGNITO LOGIN</button>
-      <button class="auth-tab" onclick="switchTab('iam')">🔑 IAM ACCESS KEYS</button>
+      <!-- ✅ TAB 1 label changed: Cognito → IAM USER LOGIN -->
+      <button class="auth-tab active" onclick="switchTab('user')">👤 IAM USER LOGIN</button>
+      <button class="auth-tab"        onclick="switchTab('keys')">🔑 IAM ACCESS KEYS</button>
     </div>
 
     <!-- Message box (shared) -->
     <div class="msg-box error" id="msgBox"></div>
 
-    <!-- ══════════════════════════════════════════════
-         TAB 1 — AWS COGNITO (Username + Password)
-         ══════════════════════════════════════════════ -->
-    <div class="auth-panel active" id="panel-cognito">
+    <!-- ══════════════════════════════════════════════════════════
+         TAB 1 — IAM USER LOGIN  (Username + Password via /api/verify-user)
+         ══════════════════════════════════════════════════════════ -->
+    <div class="auth-panel active" id="panel-user">
 
       <div class="field">
         <label>AWS Account ID <span class="required">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">🔑</span>
-          <input type="number" id="cognitoAccountId" placeholder="123456789012" autocomplete="off" />
+          <input type="number" id="userAccountId" placeholder="123456789012" autocomplete="off" />
         </div>
       </div>
 
       <div class="field">
-        <label>Cognito Username <span class="required">*</span></label>
+        <label>IAM Username <span class="required">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">👤</span>
-          <input type="text" id="cognitoUsername" placeholder="e.g. raegan-devops" autocomplete="off" />
+          <input type="text" id="userUsername" placeholder="e.g. raegan-devops" autocomplete="off" />
         </div>
       </div>
 
@@ -370,34 +333,21 @@
         <label>Password <span class="required">*</span></label>
         <div class="input-wrap">
           <span class="input-icon">🔒</span>
-          <input type="password" id="cognitoPassword" placeholder="••••••••••••" autocomplete="off" />
-          <button class="toggle-pw" onclick="togglePw('cognitoPassword', this)">👁</button>
+          <input type="password" id="userPassword" placeholder="••••••••••••" autocomplete="off" />
+          <button class="toggle-pw" onclick="togglePw('userPassword', this)">👁</button>
         </div>
       </div>
 
-      <!-- New password required panel (first-time login) -->
-      <div class="new-pw-panel" id="newPwPanel">
-        <h4>⚡ NEW PASSWORD REQUIRED</h4>
-        <div class="field" style="margin-bottom:0">
-          <label>Set New Password <span class="required">*</span></label>
-          <div class="input-wrap">
-            <span class="input-icon">🔒</span>
-            <input type="password" id="newPassword" placeholder="Min 8 chars, upper+lower+number" autocomplete="off" />
-            <button class="toggle-pw" onclick="togglePw('newPassword', this)">👁</button>
-          </div>
-        </div>
-      </div>
-
-      <button class="btn-login" id="cognitoBtn" onclick="doCognitoLogin()">
-        <span class="btn-text">⚡ Sign In with AWS Cognito</span>
+      <button class="btn-login" id="userBtn" onclick="doUserLogin()">
+        <span class="btn-text">⚡ Sign In with IAM User</span>
         <div class="spinner"></div>
       </button>
     </div>
 
-    <!-- ══════════════════════════════════════════════
-         TAB 2 — IAM ACCESS KEY (Backend STS verify)
-         ══════════════════════════════════════════════ -->
-    <div class="auth-panel" id="panel-iam">
+    <!-- ══════════════════════════════════════════════════════════
+         TAB 2 — IAM ACCESS KEYS  (Access Key + Secret via /api/verify)
+         ══════════════════════════════════════════════════════════ -->
+    <div class="auth-panel" id="panel-keys">
 
       <div class="field">
         <label>AWS Account ID <span class="required">*</span></label>
@@ -444,43 +394,31 @@
   <footer>RAEGAN DevOps Portal &nbsp;|&nbsp; AWS IAM Integration &nbsp;|&nbsp; Real Auth</footer>
 
 <script>
-  // ═══════════════════════════════════════════════════════════════
-  //  ✅  STEP 1 — SET YOUR AWS COGNITO VALUES HERE
-  //  Go to: AWS Console → Cognito → User Pools → select your pool
-  // ═══════════════════════════════════════════════════════════════
-  var COGNITO_CONFIG = {
-    UserPoolId : 'YOUR_USER_POOL_ID',    // e.g. 'ap-south-1_AbcDef123'
-    ClientId   : 'YOUR_APP_CLIENT_ID'    // e.g. '1abc2defghij3klmnopqrstu4v'
-  };
 
-  // Hide config notice once real values are set
-  if (COGNITO_CONFIG.UserPoolId !== 'YOUR_USER_POOL_ID') {
-    document.getElementById('configNotice').classList.remove('show');
-  }
-
-  // ── Active Cognito user (needed for newPasswordRequired challenge)
-  var pendingCognitoUser     = null;
-  var pendingUserAttributes  = null;
-
-  // ── TAB SWITCHER
+  // ── TAB SWITCHER ────────────────────────────────────────────────
   function switchTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
     document.querySelectorAll('.auth-panel').forEach(function(p){ p.classList.remove('active'); });
     var tabs   = document.querySelectorAll('.auth-tab');
     var panels = document.querySelectorAll('.auth-panel');
-    if (tab === 'cognito') { tabs[0].classList.add('active'); panels[0].classList.add('active'); }
-    else                   { tabs[1].classList.add('active'); panels[1].classList.add('active'); }
+    if (tab === 'user') {
+      tabs[0].classList.add('active');
+      panels[0].classList.add('active');
+    } else {
+      tabs[1].classList.add('active');
+      panels[1].classList.add('active');
+    }
     clearMsg();
   }
 
-  // ── TOGGLE PASSWORD VISIBILITY
+  // ── TOGGLE PASSWORD VISIBILITY ──────────────────────────────────
   function togglePw(inputId, btn) {
     var el = document.getElementById(inputId);
     if (el.type === 'password') { el.type = 'text';     btn.textContent = '🙈'; }
     else                        { el.type = 'password'; btn.textContent = '👁';  }
   }
 
-  // ── MESSAGE HELPERS
+  // ── MESSAGE HELPERS ─────────────────────────────────────────────
   function showMsg(text, type) {
     var box = document.getElementById('msgBox');
     box.textContent = text;
@@ -498,122 +436,61 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  ✅ TAB 1 — COGNITO LOGIN (Real AWS Authentication)
+  //  TAB 1 — IAM USER LOGIN
+  //  Calls POST /api/verify-user  { accountId, username, password }
+  //  Spring Boot backend verifies the user credentials and returns
+  //  { status:"ok", username, accountId, arn } on success
   // ═══════════════════════════════════════════════════════════════
-  function doCognitoLogin() {
-    var accountId = document.getElementById('cognitoAccountId').value.trim();
-    var username  = document.getElementById('cognitoUsername').value.trim();
-    var password  = document.getElementById('cognitoPassword').value.trim();
+  function doUserLogin() {
+    var accountId = document.getElementById('userAccountId').value.trim();
+    var username  = document.getElementById('userUsername').value.trim();
+    var password  = document.getElementById('userPassword').value.trim();
 
-    // Validation
     if (!accountId || !username || !password) {
       showMsg('⚠ All fields are required.', 'error'); return;
     }
     if (accountId.length < 10 || accountId.length > 12) {
       showMsg('⚠ AWS Account ID must be 10-12 digits.', 'error'); return;
     }
-    if (COGNITO_CONFIG.UserPoolId === 'YOUR_USER_POOL_ID') {
-      showMsg('⚠ Cognito not configured yet. Set UserPoolId and ClientId in this file.', 'warn'); return;
-    }
 
     clearMsg();
-    setLoading('cognitoBtn', true);
+    setLoading('userBtn', true);
 
-    // ✅ REAL AWS Cognito authentication
-    var userPool = new AmazonCognitoIdentity.CognitoUserPool(COGNITO_CONFIG);
-    var cognitoUser = new AmazonCognitoIdentity.CognitoUser({
-      Username : username,
-      Pool     : userPool
-    });
-    var authDetails = new AmazonCognitoIdentity.AuthenticationDetails({
-      Username : username,
-      Password : password
-    });
-
-    cognitoUser.authenticateUser(authDetails, {
-
-      // ✅ SUCCESS — user is real and authenticated
-      onSuccess: function(result) {
-        var idToken      = result.getIdToken().getJwtToken();
-        var accessToken  = result.getAccessToken().getJwtToken();
-        var payload      = parseJwt(idToken);
-
-        sessionStorage.setItem('iam_auth',        'true');
-        sessionStorage.setItem('iam_username',    payload['cognito:username'] || username);
-        sessionStorage.setItem('iam_id',          accountId);
-        sessionStorage.setItem('iam_email',       payload.email || '');
-        sessionStorage.setItem('jwt_token',       idToken);
-        sessionStorage.setItem('access_token',    accessToken);
-        sessionStorage.setItem('token_expiry',    payload.exp);
-        sessionStorage.setItem('auth_method',     'cognito');
-
-        showMsg('✅ Authentication successful! Redirecting...', 'success');
-        setTimeout(function(){ window.location.href = '/dashboard.html'; }, 1000);
-      },
-
-      // ✅ FAILURE — wrong credentials or user doesn't exist in Cognito
-      onFailure: function(err) {
-        setLoading('cognitoBtn', false);
-        var msg = err.message || 'Authentication failed';
-        if (err.code === 'UserNotFoundException')      msg = '⚠ User not found in AWS Cognito.';
-        if (err.code === 'NotAuthorizedException')     msg = '⚠ Incorrect username or password.';
-        if (err.code === 'UserNotConfirmedException')  msg = '⚠ Account not confirmed. Check your email.';
-        if (err.code === 'PasswordResetRequiredException') msg = '⚠ Password reset required via AWS Console.';
-        showMsg(msg, 'error');
-      },
-
-      // ✅ FIRST LOGIN — AWS forces password change
-      newPasswordRequired: function(userAttributes, requiredAttributes) {
-        setLoading('cognitoBtn', false);
-        pendingCognitoUser    = cognitoUser;
-        pendingUserAttributes = userAttributes;
-        document.getElementById('newPwPanel').classList.add('show');
-        showMsg('⚡ First login: you must set a new password below.', 'warn');
-        document.getElementById('cognitoBtn').querySelector('.btn-text').textContent = '✅ Set New Password & Sign In';
-        // Swap the click handler
-        document.getElementById('cognitoBtn').onclick = submitNewPassword;
-      },
-
-      // MFA challenge (if enabled)
-      totpRequired: function(secretCode) {
-        setLoading('cognitoBtn', false);
-        var code = prompt('Enter your MFA / TOTP code:');
-        if (code) cognitoUser.sendMFACode(code, this, 'SOFTWARE_TOKEN_MFA');
-      }
-    });
-  }
-
-  // Handle new password submission (first-time login)
-  function submitNewPassword() {
-    var newPw = document.getElementById('newPassword').value.trim();
-    if (!newPw || newPw.length < 8) {
-      showMsg('⚠ Password must be at least 8 characters.', 'error'); return;
-    }
-    setLoading('cognitoBtn', true);
-    delete pendingUserAttributes.email_verified;
-    delete pendingUserAttributes.phone_number_verified;
-
-    pendingCognitoUser.completeNewPasswordChallenge(newPw, pendingUserAttributes, {
-      onSuccess: function(result) {
+    // ✅ Call Spring Boot backend → POST /api/verify-user
+    fetch('/api/verify-user', {
+      method  : 'POST',
+      headers : { 'Content-Type': 'application/json' },
+      body    : JSON.stringify({
+        accountId : accountId,
+        username  : username,
+        password  : password
+      })
+    })
+    .then(function(res){ return res.json(); })
+    .then(function(data) {
+      setLoading('userBtn', false);
+      if (data.status === 'ok') {
         sessionStorage.setItem('iam_auth',     'true');
-        sessionStorage.setItem('iam_username', document.getElementById('cognitoUsername').value.trim());
-        sessionStorage.setItem('iam_id',       document.getElementById('cognitoAccountId').value.trim());
-        sessionStorage.setItem('jwt_token',    result.getIdToken().getJwtToken());
-        sessionStorage.setItem('auth_method',  'cognito');
-        showMsg('✅ Password set! Redirecting...', 'success');
+        sessionStorage.setItem('iam_username', data.username  || username);
+        sessionStorage.setItem('iam_id',       data.accountId || accountId);
+        sessionStorage.setItem('iam_arn',      data.arn       || '');
+        sessionStorage.setItem('auth_method',  'iam_user');
+        showMsg('✅ IAM User verified! Redirecting...', 'success');
         setTimeout(function(){ window.location.href = '/dashboard.html'; }, 1000);
-      },
-      onFailure: function(err) {
-        setLoading('cognitoBtn', false);
-        showMsg('⚠ ' + (err.message || 'Failed to set new password.'), 'error');
+      } else {
+        showMsg('⚠ ' + (data.message || 'Authentication failed.'), 'error');
       }
+    })
+    .catch(function() {
+      setLoading('userBtn', false);
+      showMsg('⚠ Could not reach backend. Is Spring Boot running?', 'error');
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  ✅ TAB 2 — IAM ACCESS KEY (calls your Spring Boot /api/verify)
-  //  Your SimbuController.java must expose POST /api/verify
-  //  (see SimbuController.java provided below)
+  //  TAB 2 — IAM ACCESS KEYS
+  //  Calls POST /api/verify  { accountId, username, accessKey, secretKey }
+  //  Spring Boot backend calls AWS STS GetCallerIdentity to verify
   // ═══════════════════════════════════════════════════════════════
   function doIAMLogin() {
     var accountId  = document.getElementById('iamAccountId').value.trim();
@@ -647,9 +524,9 @@
       setLoading('iamBtn', false);
       if (data.status === 'ok') {
         sessionStorage.setItem('iam_auth',     'true');
-        sessionStorage.setItem('iam_username', data.username || username);
+        sessionStorage.setItem('iam_username', data.username  || username);
         sessionStorage.setItem('iam_id',       data.accountId || accountId);
-        sessionStorage.setItem('iam_arn',      data.arn || '');
+        sessionStorage.setItem('iam_arn',      data.arn       || '');
         sessionStorage.setItem('auth_method',  'iam_keys');
         showMsg('✅ AWS STS verified! Redirecting...', 'success');
         setTimeout(function(){ window.location.href = '/dashboard.html'; }, 1000);
@@ -657,27 +534,20 @@
         showMsg('⚠ ' + (data.message || 'AWS verification failed.'), 'error');
       }
     })
-    .catch(function(err) {
+    .catch(function() {
       setLoading('iamBtn', false);
       showMsg('⚠ Could not reach backend. Is Spring Boot running?', 'error');
     });
   }
 
-  // ── JWT Decode helper (no library needed)
-  function parseJwt(token) {
-    try {
-      var base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      return JSON.parse(atob(base64));
-    } catch(e) { return {}; }
-  }
-
-  // ── Enter key support
+  // ── Enter key support ───────────────────────────────────────────
   document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter') return;
     var activePanel = document.querySelector('.auth-panel.active');
-    if (activePanel.id === 'panel-cognito') doCognitoLogin();
+    if (activePanel.id === 'panel-user') doUserLogin();
     else doIAMLogin();
   });
+
 </script>
 </body>
 </html>
