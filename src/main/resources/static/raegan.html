@@ -1,553 +1,362 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RAEGAN - AWS IAM Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
-
-  <!-- ✅ Cognito SDK removed — pure IAM authentication only -->
-
   <style>
     :root {
-      --bg: #0a0e1a;
-      --card: #0f1629;
-      --border: #1e3a5f;
-      --accent: #ff2d78;
-      --accent2: #ffd700;
-      --text: #c8d8e8;
-      --green: #00ff88;
-      --purple: #7b2fff;
-      --input-bg: #07090f;
+      --bg:#0a0e1a; --card:#0f1629; --border:#1e3a5f;
+      --accent:#ff2d78; --accent2:#ffd700; --text:#c8d8e8;
+      --green:#00ff88; --purple:#7b2fff; --input-bg:#07090f;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: var(--bg);
-      font-family: 'Share Tech Mono', monospace;
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow-x: hidden;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255,45,120,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,45,120,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-    body::after {
-      content: '';
-      position: fixed;
-      top: -120px; right: -120px;
-      width: 400px; height: 400px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,45,120,0.12) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    header {
-      position: relative;
-      z-index: 1;
-      text-align: center;
-      margin-bottom: 36px;
-    }
-    .logo-title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: clamp(3rem, 10vw, 6rem);
-      font-weight: 900;
-      letter-spacing: 0.35em;
-      background: linear-gradient(135deg, var(--accent), var(--accent2), var(--purple));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: pulse 3s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%,100% { filter: drop-shadow(0 0 20px rgba(255,45,120,0.4)); }
-      50%      { filter: drop-shadow(0 0 50px rgba(255,215,0,0.5)); }
-    }
-    .tagline {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      color: var(--accent);
-      letter-spacing: 0.25em;
-      opacity: 0.75;
-    }
-    .login-card {
-      position: relative;
-      z-index: 1;
-      background: var(--card);
-      border: 1px solid rgba(255,45,120,0.25);
-      border-radius: 12px;
-      padding: 40px 44px;
-      width: 100%;
-      max-width: 460px;
-      box-shadow: 0 0 40px rgba(255,45,120,0.08), inset 0 0 40px rgba(255,45,120,0.03);
-    }
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 30px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid rgba(255,45,120,0.2);
-    }
-    .aws-icon {
-      width: 38px; height: 38px;
-      background: linear-gradient(135deg, #ff9900, #ff6a00);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem;
-      flex-shrink: 0;
-    }
-    .card-title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #ff9900;
-      letter-spacing: 0.1em;
-    }
-    .card-sub { font-size: 0.72rem; color: rgba(200,216,232,0.45); margin-top: 2px; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);font-family:'Share Tech Mono',monospace;color:var(--text);
+      min-height:100vh;display:flex;flex-direction:column;align-items:center;
+      justify-content:center;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(255,45,120,0.03) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,45,120,0.03) 1px,transparent 1px);
+      background-size:40px 40px;pointer-events:none;z-index:0;}
+    body::after{content:'';position:fixed;top:-120px;right:-120px;width:400px;height:400px;
+      border-radius:50%;background:radial-gradient(circle,rgba(255,45,120,0.12) 0%,transparent 70%);
+      pointer-events:none;z-index:0;}
+    header{position:relative;z-index:1;text-align:center;margin-bottom:36px;}
+    .logo-title{font-family:'Orbitron',sans-serif;font-size:clamp(3rem,10vw,6rem);font-weight:900;
+      letter-spacing:0.35em;background:linear-gradient(135deg,var(--accent),var(--accent2),var(--purple));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      animation:pulse 3s ease-in-out infinite;}
+    @keyframes pulse{0%,100%{filter:drop-shadow(0 0 20px rgba(255,45,120,0.4));}
+      50%{filter:drop-shadow(0 0 50px rgba(255,215,0,0.5));}}
+    .tagline{margin-top:10px;font-size:0.9rem;color:var(--accent);letter-spacing:0.25em;opacity:0.75;}
+    .login-card{position:relative;z-index:1;background:var(--card);
+      border:1px solid rgba(255,45,120,0.25);border-radius:12px;padding:40px 44px;
+      width:100%;max-width:480px;
+      box-shadow:0 0 40px rgba(255,45,120,0.08),inset 0 0 40px rgba(255,45,120,0.03);}
+    .card-header{display:flex;align-items:center;gap:12px;margin-bottom:28px;
+      padding-bottom:18px;border-bottom:1px solid rgba(255,45,120,0.2);}
+    .aws-icon{width:38px;height:38px;background:linear-gradient(135deg,#ff9900,#ff6a00);
+      border-radius:8px;display:flex;align-items:center;justify-content:center;
+      font-size:1.3rem;flex-shrink:0;}
+    .card-title{font-family:'Orbitron',sans-serif;font-size:0.95rem;font-weight:700;
+      color:#ff9900;letter-spacing:0.1em;}
+    .card-sub{font-size:0.72rem;color:rgba(200,216,232,0.45);margin-top:2px;}
 
-    .field { margin-bottom: 22px; }
-    label {
-      display: block;
-      font-size: 0.72rem;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: rgba(200,216,232,0.55);
-      margin-bottom: 8px;
-    }
-    label span.required { color: var(--accent); margin-left: 2px; }
-    .input-wrap { position: relative; }
-    .input-icon {
-      position: absolute;
-      left: 14px; top: 50%;
-      transform: translateY(-50%);
-      font-size: 1rem;
-      pointer-events: none;
-      opacity: 0.5;
-    }
-    input[type="text"],
-    input[type="password"],
-    input[type="number"] {
-      width: 100%;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 13px 14px 13px 42px;
-      color: var(--text);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.92rem;
-      outline: none;
-      transition: border-color 0.25s, box-shadow 0.25s;
-      -moz-appearance: textfield;
-    }
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,45,120,0.12); }
-    input::placeholder { color: rgba(200,216,232,0.25); }
-    .toggle-pw {
-      position: absolute;
-      right: 14px; top: 50%;
-      transform: translateY(-50%);
-      cursor: pointer;
-      font-size: 1rem;
-      opacity: 0.4;
-      transition: opacity 0.2s;
-      background: none; border: none;
-      color: var(--text); padding: 0;
-    }
-    .toggle-pw:hover { opacity: 0.9; }
+    /* ── Tabs ── */
+    .auth-tabs{display:flex;margin-bottom:22px;border:1px solid var(--border);
+      border-radius:6px;overflow:hidden;}
+    .auth-tab{flex:1;padding:9px 8px;font-family:'Orbitron',sans-serif;font-size:0.58rem;
+      font-weight:700;letter-spacing:0.08em;text-align:center;cursor:pointer;
+      background:transparent;border:none;color:rgba(200,216,232,0.35);transition:all 0.2s;}
+    .auth-tab.active{background:rgba(255,45,120,0.12);color:var(--accent);}
+    .auth-tab:not(.active):hover{color:rgba(200,216,232,0.6);}
+    .auth-panel{display:none;}
+    .auth-panel.active{display:block;}
 
-    /* ── MESSAGES ── */
-    .msg-box {
-      display: none;
-      border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 0.8rem;
-      margin-bottom: 20px;
-      letter-spacing: 0.05em;
-    }
-    .msg-box.show { display: block; }
-    .msg-box.error {
-      background: rgba(255,45,120,0.1);
-      border: 1px solid rgba(255,45,120,0.35);
-      color: var(--accent);
-    }
-    .msg-box.warn {
-      background: rgba(255,153,0,0.1);
-      border: 1px solid rgba(255,153,0,0.35);
-      color: #ff9900;
-    }
-    .msg-box.success {
-      background: rgba(0,255,136,0.08);
-      border: 1px solid rgba(0,255,136,0.3);
-      color: var(--green);
-    }
+    /* ── Info banner ── */
+    .info-banner{background:rgba(0,200,255,0.06);border:1px solid rgba(0,200,255,0.2);
+      border-radius:6px;padding:9px 13px;font-size:0.72rem;color:rgba(0,200,255,0.75);
+      margin-bottom:20px;line-height:1.7;}
+    .info-banner strong{color:rgba(0,220,255,0.95);}
 
-    .btn-login {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, rgba(255,45,120,0.2), rgba(123,47,255,0.2));
-      border: 2px solid var(--accent);
-      border-radius: 6px;
-      color: var(--accent);
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: all 0.3s;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-login:hover {
-      box-shadow: 0 0 30px rgba(255,45,120,0.4);
-      transform: translateY(-2px);
-    }
-    .btn-login:active { transform: translateY(0); }
-    .btn-login:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .btn-login .btn-text { display: inline-flex; align-items: center; gap: 8px; }
-    .btn-login .spinner { display: none; }
-    .btn-login.loading .btn-text { display: none; }
-    .btn-login.loading .spinner {
-      display: inline-block;
-      width: 18px; height: 18px;
-      border: 2px solid rgba(255,45,120,0.3);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin: 0 auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── Fields ── */
+    .field{margin-bottom:20px;}
+    label{display:block;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;
+      color:rgba(200,216,232,0.55);margin-bottom:8px;}
+    label span.required{color:var(--accent);margin-left:2px;}
+    .input-wrap{position:relative;}
+    .input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+      font-size:1rem;pointer-events:none;opacity:0.5;}
+    input[type="text"],input[type="password"],input[type="number"]{
+      width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:6px;
+      padding:13px 14px 13px 42px;color:var(--text);font-family:'Share Tech Mono',monospace;
+      font-size:0.92rem;outline:none;transition:border-color 0.25s,box-shadow 0.25s;
+      -moz-appearance:textfield;}
+    input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+    input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,45,120,0.12);}
+    input::placeholder{color:rgba(200,216,232,0.25);}
+    .toggle-pw{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;
+      font-size:1rem;opacity:0.4;transition:opacity 0.2s;background:none;border:none;
+      color:var(--text);padding:0;}
+    .toggle-pw:hover{opacity:0.9;}
 
-    .secure-note {
-      text-align: center;
-      margin-top: 22px;
-      font-size: 0.7rem;
-      color: rgba(200,216,232,0.3);
-      letter-spacing: 0.1em;
-    }
-    .secure-note span { color: var(--green); }
+    /* ── Messages ── */
+    .msg-box{display:none;border-radius:6px;padding:10px 14px;font-size:0.8rem;
+      margin-bottom:18px;letter-spacing:0.05em;}
+    .msg-box.show{display:block;}
+    .msg-box.error{background:rgba(255,45,120,0.1);border:1px solid rgba(255,45,120,0.35);color:var(--accent);}
+    .msg-box.success{background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.3);color:var(--green);}
 
-    /* ── AUTH METHOD TABS ── */
-    .auth-tabs {
-      display: flex;
-      gap: 0;
-      margin-bottom: 24px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .auth-tab {
-      flex: 1;
-      padding: 9px 12px;
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-align: center;
-      cursor: pointer;
-      background: transparent;
-      border: none;
-      color: rgba(200,216,232,0.35);
-      transition: all 0.2s;
-    }
-    .auth-tab.active {
-      background: rgba(255,45,120,0.12);
-      color: var(--accent);
-    }
-    .auth-tab:not(.active):hover { color: rgba(200,216,232,0.6); }
+    /* ── Button ── */
+    .btn-login{width:100%;padding:14px;
+      background:linear-gradient(135deg,rgba(255,45,120,0.2),rgba(123,47,255,0.2));
+      border:2px solid var(--accent);border-radius:6px;color:var(--accent);
+      font-family:'Orbitron',sans-serif;font-size:0.82rem;font-weight:700;
+      letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:all 0.3s;}
+    .btn-login:hover{box-shadow:0 0 30px rgba(255,45,120,0.4);transform:translateY(-2px);}
+    .btn-login:active{transform:translateY(0);}
+    .btn-login:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+    .btn-login .btn-text{display:inline-flex;align-items:center;gap:8px;}
+    .btn-login .spinner{display:none;}
+    .btn-login.loading .btn-text{display:none;}
+    .btn-login.loading .spinner{display:inline-block;width:18px;height:18px;
+      border:2px solid rgba(255,45,120,0.3);border-top-color:var(--accent);
+      border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto;}
+    @keyframes spin{to{transform:rotate(360deg);}}
 
-    .auth-panel { display: none; }
-    .auth-panel.active { display: block; }
-
-    footer {
-      position: relative; z-index: 1;
-      margin-top: 40px;
-      text-align: center;
-      font-size: 0.7rem;
-      color: rgba(200,216,232,0.25);
-      letter-spacing: 0.12em;
-    }
+    .secure-note{text-align:center;margin-top:20px;font-size:0.7rem;
+      color:rgba(200,216,232,0.3);letter-spacing:0.1em;}
+    .secure-note span{color:var(--green);}
+    footer{position:relative;z-index:1;margin-top:40px;text-align:center;
+      font-size:0.7rem;color:rgba(200,216,232,0.25);letter-spacing:0.12em;}
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="logo-title">RAEGAN</div>
-    <div class="tagline">// AWS IAM Secure Access Portal //</div>
-  </header>
+<header>
+  <div class="logo-title">RAEGAN</div>
+  <div class="tagline">// AWS IAM Secure Access Portal //</div>
+</header>
 
-  <div class="login-card">
-    <div class="card-header">
-      <div class="aws-icon">☁</div>
-      <div>
-        <div class="card-title">AWS IAM Sign In</div>
-        <div class="card-sub">Identity &amp; Access Management</div>
-      </div>
+<div class="login-card">
+  <div class="card-header">
+    <div class="aws-icon">☁</div>
+    <div>
+      <div class="card-title">AWS IAM Sign In</div>
+      <div class="card-sub">Identity &amp; Access Management</div>
     </div>
-
-    <!-- Auth method tabs -->
-    <div class="auth-tabs">
-      <!-- ✅ TAB 1 label changed: Cognito → IAM USER LOGIN -->
-      <button class="auth-tab active" onclick="switchTab('user')">👤 IAM USER LOGIN</button>
-      <button class="auth-tab"        onclick="switchTab('keys')">🔑 IAM ACCESS KEYS</button>
-    </div>
-
-    <!-- Message box (shared) -->
-    <div class="msg-box error" id="msgBox"></div>
-
-    <!-- ══════════════════════════════════════════════════════════
-         TAB 1 — IAM USER LOGIN  (Username + Password via /api/verify-user)
-         ══════════════════════════════════════════════════════════ -->
-    <div class="auth-panel active" id="panel-user">
-
-      <div class="field">
-        <label>AWS Account ID <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="input-icon">🔑</span>
-          <input type="number" id="userAccountId" placeholder="123456789012" autocomplete="off" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label>IAM Username <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="input-icon">👤</span>
-          <input type="text" id="userUsername" placeholder="e.g. raegan-devops" autocomplete="off" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Password <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="input-icon">🔒</span>
-          <input type="password" id="userPassword" placeholder="••••••••••••" autocomplete="off" />
-          <button class="toggle-pw" onclick="togglePw('userPassword', this)">👁</button>
-        </div>
-      </div>
-
-      <button class="btn-login" id="userBtn" onclick="doUserLogin()">
-        <span class="btn-text">⚡ Sign In with IAM User</span>
-        <div class="spinner"></div>
-      </button>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════════
-         TAB 2 — IAM ACCESS KEYS  (Access Key + Secret via /api/verify)
-         ══════════════════════════════════════════════════════════ -->
-    <div class="auth-panel" id="panel-keys">
-
-      <div class="field">
-        <label>AWS Account ID <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="input-icon">🔑</span>
-          <input type="number" id="iamAccountId" placeholder="123456789012" autocomplete="off" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label>IAM Username <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="input-icon">👤</span>
-          <input type="text" id="iamUsername" placeholder="e.g. raegan-devops" autocomplete="off" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label>IAM Access Key ID <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="input-icon">🗝</span>
-          <input type="text" id="iamAccessKey" placeholder="AKIAIOSFODNN7EXAMPLE" autocomplete="off" />
-        </div>
-      </div>
-
-      <div class="field">
-        <label>IAM Secret Access Key <span class="required">*</span></label>
-        <div class="input-wrap">
-          <span class="input-icon">🔒</span>
-          <input type="password" id="iamSecretKey" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCY..." autocomplete="off" />
-          <button class="toggle-pw" onclick="togglePw('iamSecretKey', this)">👁</button>
-        </div>
-      </div>
-
-      <button class="btn-login" id="iamBtn" onclick="doIAMLogin()">
-        <span class="btn-text">⚡ Verify via AWS STS</span>
-        <div class="spinner"></div>
-      </button>
-    </div>
-
-    <p class="secure-note"><span>🔐</span> Connection secured via AWS IAM Authentication</p>
   </div>
 
-  <footer>RAEGAN DevOps Portal &nbsp;|&nbsp; AWS IAM Integration &nbsp;|&nbsp; Real Auth</footer>
+  <!-- ── Tabs ── -->
+  <div class="auth-tabs">
+    <button class="auth-tab active" onclick="switchTab('user')">👤 IAM USER LOGIN</button>
+    <button class="auth-tab"        onclick="switchTab('keys')">🔑 IAM ACCESS KEYS</button>
+  </div>
+
+  <!-- shared message box -->
+  <div class="msg-box" id="msgBox"></div>
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 1 — IAM USER LOGIN
+       User enters: Account ID + Username + Password
+       Backend: POST /api/verify-user
+       Auth: verifies username+password against app store,
+             then calls AWS STS to confirm identity
+       ════════════════════════════════════════════════════════ -->
+  <div class="auth-panel active" id="panel-user">
+    <div class="info-banner">
+      Login with your <strong>IAM username</strong> and <strong>password</strong>.<br>
+      Ask your admin to register your account before first login.
+    </div>
+
+    <div class="field">
+      <label>AWS Account ID <span class="required">*</span></label>
+      <div class="input-wrap">
+        <span class="input-icon">🏢</span>
+        <input type="number" id="userAccountId" placeholder="382458445256" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>IAM Username <span class="required">*</span></label>
+      <div class="input-wrap">
+        <span class="input-icon">👤</span>
+        <input type="text" id="userUsername" placeholder="e.g. simbus" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Password <span class="required">*</span></label>
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="userPassword" placeholder="••••••••••••" autocomplete="off"/>
+        <button class="toggle-pw" onclick="togglePw('userPassword',this)">👁</button>
+      </div>
+    </div>
+
+    <button class="btn-login" id="userBtn" onclick="doUserLogin()">
+      <span class="btn-text">⚡ Sign In with IAM User</span>
+      <div class="spinner"></div>
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════
+       TAB 2 — IAM ACCESS KEYS
+       User enters: Account ID + Username + Access Key + Secret Key
+       Backend: POST /api/verify
+       Auth: calls AWS STS GetCallerIdentity directly
+             Nothing stored on server at all
+       ════════════════════════════════════════════════════════ -->
+  <div class="auth-panel" id="panel-keys">
+    <div class="info-banner">
+      Login directly with your AWS <strong>Access Key ID</strong> and
+      <strong>Secret Access Key</strong>. Verified live by AWS STS — nothing stored.
+    </div>
+
+    <div class="field">
+      <label>AWS Account ID <span class="required">*</span></label>
+      <div class="input-wrap">
+        <span class="input-icon">🏢</span>
+        <input type="number" id="iamAccountId" placeholder="123456789012" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>IAM Username <span class="required">*</span></label>
+      <div class="input-wrap">
+        <span class="input-icon">👤</span>
+        <input type="text" id="iamUsername" placeholder="e.g. raegan-devops" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>IAM Access Key ID <span class="required">*</span></label>
+      <div class="input-wrap">
+        <span class="input-icon">🗝</span>
+        <input type="text" id="iamAccessKey" placeholder="AKIAIOSFODNN7EXAMPLE" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>IAM Secret Access Key <span class="required">*</span></label>
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="iamSecretKey" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCY..." autocomplete="off"/>
+        <button class="toggle-pw" onclick="togglePw('iamSecretKey',this)">👁</button>
+      </div>
+    </div>
+
+    <button class="btn-login" id="iamBtn" onclick="doIAMLogin()">
+      <span class="btn-text">⚡ Verify via AWS STS</span>
+      <div class="spinner"></div>
+    </button>
+  </div>
+
+  <p class="secure-note"><span>🔐</span> Authenticated directly by AWS IAM — nothing stored on server</p>
+</div>
+
+<footer>RAEGAN DevOps Portal &nbsp;|&nbsp; AWS IAM Integration &nbsp;|&nbsp; Real Auth</footer>
 
 <script>
-
-  // ── TAB SWITCHER ────────────────────────────────────────────────
+  // ── Tab switcher ──────────────────────────────────────────────────────
   function switchTab(tab) {
-    document.querySelectorAll('.auth-tab').forEach(function(t){ t.classList.remove('active'); });
-    document.querySelectorAll('.auth-panel').forEach(function(p){ p.classList.remove('active'); });
-    var tabs   = document.querySelectorAll('.auth-tab');
-    var panels = document.querySelectorAll('.auth-panel');
+    document.querySelectorAll('.auth-tab').forEach(function(t){t.classList.remove('active');});
+    document.querySelectorAll('.auth-panel').forEach(function(p){p.classList.remove('active');});
     if (tab === 'user') {
-      tabs[0].classList.add('active');
-      panels[0].classList.add('active');
+      document.querySelectorAll('.auth-tab')[0].classList.add('active');
+      document.getElementById('panel-user').classList.add('active');
     } else {
-      tabs[1].classList.add('active');
-      panels[1].classList.add('active');
+      document.querySelectorAll('.auth-tab')[1].classList.add('active');
+      document.getElementById('panel-keys').classList.add('active');
     }
     clearMsg();
   }
 
-  // ── TOGGLE PASSWORD VISIBILITY ──────────────────────────────────
-  function togglePw(inputId, btn) {
-    var el = document.getElementById(inputId);
-    if (el.type === 'password') { el.type = 'text';     btn.textContent = '🙈'; }
-    else                        { el.type = 'password'; btn.textContent = '👁';  }
+  function togglePw(id, btn) {
+    var el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
+    btn.textContent = el.type === 'password' ? '👁' : '🙈';
   }
 
-  // ── MESSAGE HELPERS ─────────────────────────────────────────────
   function showMsg(text, type) {
-    var box = document.getElementById('msgBox');
-    box.textContent = text;
-    box.className   = 'msg-box ' + type + ' show';
+    var b = document.getElementById('msgBox');
+    b.textContent = text; b.className = 'msg-box ' + type + ' show';
   }
-  function clearMsg() {
-    var box = document.getElementById('msgBox');
-    box.className = 'msg-box';
-  }
-  function setLoading(btnId, on) {
-    var btn = document.getElementById(btnId);
-    if (on) btn.classList.add('loading');
-    else    btn.classList.remove('loading');
-    btn.disabled = on;
+  function clearMsg() { document.getElementById('msgBox').className = 'msg-box'; }
+  function setLoading(id, on) {
+    var b = document.getElementById(id);
+    b.classList.toggle('loading', on); b.disabled = on;
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  TAB 1 — IAM USER LOGIN
-  //  Calls POST /api/verify-user  { accountId, username, password }
-  //  Spring Boot backend verifies the user credentials and returns
-  //  { status:"ok", username, accountId, arn } on success
-  // ═══════════════════════════════════════════════════════════════
+  // ── TAB 1: IAM USER LOGIN ─────────────────────────────────────────────
+  // POST /api/verify-user → { accountId, username, password }
+  // Backend checks username+password in its store, then calls AWS STS
   function doUserLogin() {
     var accountId = document.getElementById('userAccountId').value.trim();
     var username  = document.getElementById('userUsername').value.trim();
     var password  = document.getElementById('userPassword').value.trim();
 
     if (!accountId || !username || !password) {
-      showMsg('⚠ All fields are required.', 'error'); return;
-    }
-    if (accountId.length < 10 || accountId.length > 12) {
-      showMsg('⚠ AWS Account ID must be 10-12 digits.', 'error'); return;
+      showMsg('All fields are required.', 'error'); return;
     }
 
-    clearMsg();
-    setLoading('userBtn', true);
+    clearMsg(); setLoading('userBtn', true);
 
-    // ✅ Call Spring Boot backend → POST /api/verify-user
     fetch('/api/verify-user', {
-      method  : 'POST',
-      headers : { 'Content-Type': 'application/json' },
-      body    : JSON.stringify({
-        accountId : accountId,
-        username  : username,
-        password  : password
-      })
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ accountId:accountId, username:username, password:password })
     })
-    .then(function(res){ return res.json(); })
+    .then(function(r){return r.json();})
     .then(function(data) {
       setLoading('userBtn', false);
       if (data.status === 'ok') {
-        sessionStorage.setItem('iam_auth',     'true');
+        sessionStorage.setItem('iam_auth',    'true');
         sessionStorage.setItem('iam_username', data.username  || username);
         sessionStorage.setItem('iam_id',       data.accountId || accountId);
         sessionStorage.setItem('iam_arn',      data.arn       || '');
-        sessionStorage.setItem('auth_method',  'iam_user');
-        showMsg('✅ IAM User verified! Redirecting...', 'success');
-        setTimeout(function(){ window.location.href = '/dashboard.html'; }, 1000);
+        sessionStorage.setItem('auth_method',  'iam_keys');   // dashboard checks 'iam_keys'
+        showMsg('Authenticated! Redirecting...', 'success');
+        setTimeout(function(){window.location.href='/dashboard.html';}, 900);
       } else {
-        showMsg('⚠ ' + (data.message || 'Authentication failed.'), 'error');
+        showMsg(data.message || 'Authentication failed.', 'error');
       }
     })
     .catch(function() {
       setLoading('userBtn', false);
-      showMsg('⚠ Could not reach backend. Is Spring Boot running?', 'error');
+      showMsg('Could not reach server. Is the backend running?', 'error');
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  TAB 2 — IAM ACCESS KEYS
-  //  Calls POST /api/verify  { accountId, username, accessKey, secretKey }
-  //  Spring Boot backend calls AWS STS GetCallerIdentity to verify
-  // ═══════════════════════════════════════════════════════════════
+  // ── TAB 2: IAM ACCESS KEYS ───────────────────────────────────────────
+  // POST /api/verify → { accountId, username, accessKey, secretKey }
+  // Backend calls AWS STS directly — nothing stored anywhere
   function doIAMLogin() {
-    var accountId  = document.getElementById('iamAccountId').value.trim();
-    var username   = document.getElementById('iamUsername').value.trim();
-    var accessKey  = document.getElementById('iamAccessKey').value.trim();
-    var secretKey  = document.getElementById('iamSecretKey').value.trim();
+    var accountId = document.getElementById('iamAccountId').value.trim();
+    var username  = document.getElementById('iamUsername').value.trim();
+    var accessKey = document.getElementById('iamAccessKey').value.trim();
+    var secretKey = document.getElementById('iamSecretKey').value.trim();
 
     if (!accountId || !username || !accessKey || !secretKey) {
-      showMsg('⚠ All fields are required.', 'error'); return;
+      showMsg('All fields are required.', 'error'); return;
     }
     if (!accessKey.startsWith('AKIA') && !accessKey.startsWith('ASIA')) {
-      showMsg('⚠ Access Key ID should start with AKIA or ASIA.', 'error'); return;
+      showMsg('Access Key ID must start with AKIA or ASIA.', 'error'); return;
     }
 
-    clearMsg();
-    setLoading('iamBtn', true);
+    clearMsg(); setLoading('iamBtn', true);
 
-    // ✅ Call Spring Boot backend → it calls AWS STS to verify
     fetch('/api/verify', {
-      method  : 'POST',
-      headers : { 'Content-Type': 'application/json' },
-      body    : JSON.stringify({
-        accountId : accountId,
-        username  : username,
-        accessKey : accessKey,
-        secretKey : secretKey
-      })
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ accountId:accountId, username:username, accessKey:accessKey, secretKey:secretKey })
     })
-    .then(function(res){ return res.json(); })
+    .then(function(r){return r.json();})
     .then(function(data) {
       setLoading('iamBtn', false);
       if (data.status === 'ok') {
-        sessionStorage.setItem('iam_auth',     'true');
+        sessionStorage.setItem('iam_auth',    'true');
         sessionStorage.setItem('iam_username', data.username  || username);
         sessionStorage.setItem('iam_id',       data.accountId || accountId);
         sessionStorage.setItem('iam_arn',      data.arn       || '');
         sessionStorage.setItem('auth_method',  'iam_keys');
-        showMsg('✅ AWS STS verified! Redirecting...', 'success');
-        setTimeout(function(){ window.location.href = '/dashboard.html'; }, 1000);
+        showMsg('AWS STS verified! Redirecting...', 'success');
+        setTimeout(function(){window.location.href='/dashboard.html';}, 900);
       } else {
-        showMsg('⚠ ' + (data.message || 'AWS verification failed.'), 'error');
+        showMsg(data.message || 'AWS verification failed.', 'error');
       }
     })
     .catch(function() {
       setLoading('iamBtn', false);
-      showMsg('⚠ Could not reach backend. Is Spring Boot running?', 'error');
+      showMsg('Could not reach server. Is the backend running?', 'error');
     });
   }
 
-  // ── Enter key support ───────────────────────────────────────────
+  // ── Enter key ─────────────────────────────────────────────────────────
   document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter') return;
-    var activePanel = document.querySelector('.auth-panel.active');
-    if (activePanel.id === 'panel-user') doUserLogin();
-    else doIAMLogin();
+    var p = document.querySelector('.auth-panel.active');
+    if (p.id === 'panel-user') doUserLogin(); else doIAMLogin();
   });
-
 </script>
 </body>
 </html>
